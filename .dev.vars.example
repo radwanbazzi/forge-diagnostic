@@ -1,0 +1,5 @@
+# Template for local env vars. Copy this file to `.dev.vars` and fill in real values.
+# `.dev.vars` is gitignored; this `.example` file is committed as documentation.
+# In production these are set with `wrangler secret put <NAME>`.
+WHATSAPP_NUMBER="9610000000"
+WHISH_LINK="https://whish.money/pay/REPLACE_ME"

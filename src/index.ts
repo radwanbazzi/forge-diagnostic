@@ -1,18 +1,31 @@
 /**
- * Welcome to Cloudflare Workers! This is your first worker.
+ * Forge SAT Diagnostic — Cloudflare Worker (Hono).
  *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
+ * A single Worker that serves the JSON API under `/api/*`. In a later phase it
+ * will also serve the Astro frontend's static assets; for now it is a
+ * backend-only, `curl`-testable API (BACKEND_SPEC §2, "backend first").
  *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
+ * Route mounts mirror BACKEND_SPEC §2:
+ *   /api/health      → health check              (implemented — B0)
+ *   /api/diagnostic  → student submit            (stub → B3)
+ *   /api/admin       → founder read/update + analytics, Access-protected (stub → B4–B6)
+ *   /api/event       → analytics events          (stub → B6)
  */
+import { Hono } from 'hono';
+import type { HonoEnv } from './types';
+import health from './routes/health';
+import diagnostic from './routes/diagnostic';
+import admin from './routes/admin';
+import events from './routes/events';
 
-export default {
-	async fetch(request, env, ctx): Promise<Response> {
-		return new Response("Hello World!");
-	},
-} satisfies ExportedHandler<Env>;
+const app = new Hono<HonoEnv>();
+
+app.route('/api/health', health);
+app.route('/api/diagnostic', diagnostic);
+app.route('/api/admin', admin); // Access-protected in B4; the analytics read route lives here too
+app.route('/api/event', events);
+
+// Anything else under /api is a genuine 404 (no static-asset fall-through yet).
+app.notFound((c) => c.json({ error: 'not_found' }, 404));
+
+export default app;
