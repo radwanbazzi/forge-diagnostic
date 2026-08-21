@@ -171,11 +171,7 @@ describe('GET /api/admin/leads/:id — detail (US-4)', () => {
 	});
 });
 
-describe('admin stubs remain 501 behind auth', () => {
-	it('PATCH /leads/:id → 501 (authenticated)', async () => {
-		const res = await SELF.fetch(`https://x/api/admin/leads/${crypto.randomUUID()}`, { method: 'PATCH', headers: auth });
-		expect(res.status).toBe(501);
-	});
+describe('admin analytics stub remains 501 behind auth', () => {
 	it('GET /analytics → 501 (authenticated); 401 unauthenticated', async () => {
 		expect((await SELF.fetch('https://x/api/admin/analytics', { headers: auth })).status).toBe(501);
 		expect((await SELF.fetch('https://x/api/admin/analytics')).status).toBe(401);

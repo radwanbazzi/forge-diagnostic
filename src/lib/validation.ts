@@ -50,3 +50,26 @@ export const submissionSchema = z.object({
 export type Submission = z.infer<typeof submissionSchema>;
 export type SubmissionAnswers = Submission['answers'];
 export type SubmissionContact = Submission['contact'];
+
+// ── PATCH /api/admin/leads/:id — manual fields only (BACKEND_SPEC §1 US-5, PRD §10) ──
+// These sets mirror the `diagnostics` schema enums exactly.
+export const FOLLOWUP_STATUSES = ['None', 'Msg1 sent', 'Msg2 sent', 'Replied', 'Not interested'] as const;
+export const OUTCOMES = ['-', 'Enrolled $80', 'Enrolled $130', 'Lost'] as const;
+
+/**
+ * The ONLY fields an admin may edit. `.strict()` makes any other key — a computed field,
+ * an answer, or an unknown field — a validation error (F5.1), so the score/profile/answers
+ * are immutable via the API. A bad enum value is rejected (F5.2), and at least one field
+ * must be present.
+ */
+export const leadUpdateSchema = z
+	.object({
+		result_sent: z.boolean().optional(),
+		followup_status: z.enum(FOLLOWUP_STATUSES).optional(),
+		outcome: z.enum(OUTCOMES).optional(),
+		notes: z.string().max(5000).nullable().optional(),
+	})
+	.strict()
+	.refine((o) => Object.keys(o).length > 0, { message: 'no updatable fields provided' });
+
+export type LeadUpdate = z.infer<typeof leadUpdateSchema>;

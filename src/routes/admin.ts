@@ -23,6 +23,7 @@ import { getDb } from '../db/client';
 import { diagnostics } from '../db/schema';
 import { requireAdmin } from '../lib/access';
 import { buildFounderWhatsAppMessage } from '../lib/whatsapp';
+import { leadUpdateSchema } from '../lib/validation';
 import type { ResultPayload } from '../lib/resultCopy';
 
 const admin = new Hono<HonoEnv>();
@@ -142,8 +143,56 @@ admin.get('/leads/:id', async (c) => {
 	}
 });
 
-// ── still stubbed (contract-first), but behind auth so unauth → 401 ──
-admin.patch('/leads/:id', (c) => c.json({ error: 'not_implemented', endpoint: 'PATCH /api/admin/leads/:id', milestone: 'B5' }, 501));
+// PATCH /api/admin/leads/:id — update ONLY the manual tracking fields (B5).
+admin.patch('/leads/:id', async (c) => {
+	const id = c.req.param('id');
+	if (!UUID_RE.test(id)) return c.json({ error: 'invalid_id' }, 400); // malformed id → 400
+
+	let body: unknown;
+	try {
+		body = await c.req.json();
+	} catch {
+		return c.json({ error: 'invalid_json', message: 'Request body must be valid JSON.' }, 400);
+	}
+
+	// Whitelist: only result_sent/followup_status/outcome/notes. Any computed/answer/unknown
+	// field → 400 (F5.1); a bad enum → 400 (F5.2); an empty body → 400. Nothing is written.
+	const parsed = leadUpdateSchema.safeParse(body);
+	if (!parsed.success) {
+		const issues = parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message }));
+		return c.json({ error: 'validation_error', issues }, 400);
+	}
+	const d = parsed.data;
+
+	// Targeted update of just the provided manual fields (never rewrites immutable data).
+	const set: Partial<typeof diagnostics.$inferInsert> = {};
+	if (d.result_sent !== undefined) set.result_sent = d.result_sent ? 1 : 0;
+	if (d.followup_status !== undefined) set.followup_status = d.followup_status;
+	if (d.outcome !== undefined) set.outcome = d.outcome;
+	if (d.notes !== undefined) set.notes = d.notes;
+
+	try {
+		const db = getDb(c.env);
+		// F5.5: last-write-wins (no optimistic locking) — acceptable for a single-admin tool.
+		const updated = await db.update(diagnostics).set(set).where(eq(diagnostics.id, id)).returning();
+		if (updated.length === 0) return c.json({ error: 'not_found' }, 404); // F5.3
+
+		const lead = updated[0];
+		let payload: ResultPayload | null = null;
+		try {
+			payload = JSON.parse(lead.result_payload) as ResultPayload;
+		} catch {
+			payload = null;
+		}
+		const { result_payload: _raw, ...rest } = lead;
+		return c.json({ ...rest, result_payload: payload });
+	} catch (err) {
+		console.error('admin: update lead failed', err);
+		return c.json({ error: 'server_error' }, 500);
+	}
+});
+
+// ── still stubbed (contract-first), behind auth so unauthenticated → 401 ──
 admin.get('/analytics', (c) => c.json({ error: 'not_implemented', endpoint: 'GET /api/admin/analytics', milestone: 'B6' }, 501));
 
 export default admin;
