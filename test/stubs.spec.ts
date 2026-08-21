@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 // return 501 Not Implemented. This locks that in until each is built (B3–B6).
 describe('unimplemented routes return 501', () => {
 	const cases: Array<{ method: string; path: string }> = [
-		{ method: 'POST', path: '/api/diagnostic/submit' },
 		{ method: 'GET', path: '/api/admin/leads' },
 		{ method: 'GET', path: '/api/admin/leads/some-id' },
 		{ method: 'PATCH', path: '/api/admin/leads/some-id' },

@@ -13,7 +13,7 @@ import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 export const diagnostics = sqliteTable('diagnostics', {
 	// identity + meta
 	id: text('id').primaryKey(), // uuid (crypto.randomUUID())
-	session_id: text('session_id').notNull(), // client-generated per attempt (dedupe, US-1.6)
+	session_id: text('session_id').notNull().unique(), // client-generated per attempt; UNIQUE for dedupe upsert (US-1.6)
 	created_at: integer('created_at')
 		.notNull()
 		.$defaultFn(() => Date.now()), // unix ms

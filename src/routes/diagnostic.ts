@@ -1,47 +1,107 @@
 /**
  * Diagnostic routes (public). Mounted at /api/diagnostic.
  *
- * ── POST /api/diagnostic/submit ─────────────────────────────  (implement in B3)
- * Create a scored lead. No auth.
- *
- * Request body (JSON):
- * {
- *   session_id: string,              // client-generated per attempt (dedupe, US-1.6)
- *   source?: string,                 // UTM/source captured from the landing URL
- *   completion_time_sec?: number,
- *   answers: {                       // the 17 scored/among-22 fields (PRD §6 / §7)
- *     target_score, grade, test_date, sat_history,
- *     q5, q6, q7, q8, q9, q10, q11, q12,
- *     hours_per_week, timing, review_mistakes, prep_status, worried_about
- *   },
- *   contact: {
- *     first_name: string,
- *     whatsapp: string,
- *     school?: string,
- *     respondent_type: 'student' | 'parent',
- *     consent: boolean               // must be true
- *   }
- * }
- *
- * Success 200: { id: string, result_payload: {...} }   // everything the result screen renders
+ * ── POST /api/diagnostic/submit ─────────────────────────────  (B3)
+ * Validate → score (lib/scoring) → build result_payload (lib/resultCopy) → persist
+ * ONE diagnostics row (answers + computed snapshot + payload) → return { id, result_payload }.
  *
  * Required failure behavior (BACKEND_SPEC §1, US-1):
- *   F1.1 missing/invalid required field          → 400 (field-level errors); nothing persisted
- *   F1.2 consent !== true                         → 400 'consent required'; nothing persisted
- *   F1.3 malformed JSON / wrong types             → 400 (zod); nothing persisted
- *   F1.4 answer option not a known option         → 400; nothing persisted
- *   F1.5 D1 write fails                            → 500 generic; log server-side; result + lead atomic
- *   F1.6 duplicate rapid re-submit (session_id)   → dedupe: update, or 409; no duplicate leads
- *   F1.7 extra/unknown fields                      → strip & ignore (do not error)
- *   F1.8 scoring produces an impossible state      → fail closed: 500, log, no partial row
+ *   F1.1 missing/invalid field      → 400 (field-level issues); nothing persisted
+ *   F1.2 consent !== true            → 400 "consent required"; nothing persisted
+ *   F1.3 malformed JSON              → 400; nothing persisted
+ *   F1.4 unknown answer option       → 400 (zod enum); nothing persisted
+ *   F1.5 D1 write fails              → 500 generic; logged; result + lead are atomic (one row)
+ *   F1.6 duplicate session_id        → dedupe via upsert on the unique session_id (no duplicate lead)
+ *   F1.7 extra/unknown fields        → stripped by zod (not an error)
+ *   F1.8 impossible scoring state    → fail closed: 500, logged, no row
  */
 import { Hono } from 'hono';
+import { eq } from 'drizzle-orm';
 import type { HonoEnv } from '../types';
+import { getDb } from '../db/client';
+import { diagnostics } from '../db/schema';
+import { submissionSchema } from '../lib/validation';
+import { isValidComputed, score } from '../lib/scoring';
+import { buildResultPayload } from '../lib/resultCopy';
 
 const diagnostic = new Hono<HonoEnv>();
 
-diagnostic.post('/submit', (c) =>
-	c.json({ error: 'not_implemented', endpoint: 'POST /api/diagnostic/submit', milestone: 'B3' }, 501),
-);
+diagnostic.post('/submit', async (c) => {
+	// F1.3 — malformed JSON.
+	let body: unknown;
+	try {
+		body = await c.req.json();
+	} catch {
+		return c.json({ error: 'invalid_json', message: 'Request body must be valid JSON.' }, 400);
+	}
+
+	// F1.1 / F1.3 / F1.4 — validate. Unknown keys are stripped (F1.7).
+	const parsed = submissionSchema.safeParse(body);
+	if (!parsed.success) {
+		const issues = parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message }));
+		return c.json({ error: 'validation_error', issues }, 400);
+	}
+	const { session_id, source, completion_time_sec, answers, contact } = parsed.data;
+
+	// F1.2 — consent must be exactly true.
+	if (contact.consent !== true) {
+		return c.json({ error: 'consent_required', message: 'consent required' }, 400);
+	}
+
+	// Score (pure, B2). Contact presence feeds the lead score (§7.9).
+	const computed = score({ answers, contact: { whatsapp: contact.whatsapp, school: contact.school ?? null } });
+
+	// F1.8 — fail closed if scoring produced an impossible state.
+	if (!isValidComputed(computed)) {
+		console.error('diagnostic submit: impossible computed state', { session_id });
+		return c.json({ error: 'scoring_error' }, 500);
+	}
+
+	// Snapshot the exact rendered result (§8). Env values drive the CTA (US-2/F2.1 fallback).
+	const result_payload = buildResultPayload(computed, answers, contact.first_name, {
+		whatsappNumber: c.env.WHATSAPP_NUMBER,
+		whishLink: c.env.WHISH_LINK,
+	});
+
+	// One row: identity + answers + contact + computed snapshot + payload.
+	const writable = {
+		session_id,
+		source: source ?? null,
+		completion_time_sec: completion_time_sec ?? null,
+		...answers,
+		first_name: contact.first_name,
+		whatsapp: contact.whatsapp,
+		school: contact.school ?? null,
+		respondent_type: (contact.respondent_type === 'Parent' ? 'parent' : 'student') as 'student' | 'parent',
+		consent: 1,
+		...computed,
+		result_payload: JSON.stringify(result_payload),
+	} satisfies Omit<typeof diagnostics.$inferInsert, 'id'>;
+
+	const id = crypto.randomUUID();
+
+	try {
+		const db = getDb(c.env);
+		// F1.6 — dedupe on the unique session_id: a re-submit updates the same lead row.
+		// F1.5 — a single upsert statement is atomic: it either fully writes or nothing does.
+		const returned = await db
+			.insert(diagnostics)
+			.values({ id, ...writable })
+			.onConflictDoUpdate({ target: diagnostics.session_id, set: writable })
+			.returning({ id: diagnostics.id });
+
+		let savedId = returned[0]?.id;
+		if (!savedId) {
+			const existing = await db.select({ id: diagnostics.id }).from(diagnostics).where(eq(diagnostics.session_id, session_id)).limit(1);
+			savedId = existing[0]?.id ?? id;
+		}
+
+		return c.json({ id: savedId, result_payload }, 200);
+	} catch (err) {
+		// F1.5 — never return a result the lead could not be saved against.
+		console.error('diagnostic submit: D1 write failed', err);
+		return c.json({ error: 'server_error' }, 500);
+	}
+});
 
 export default diagnostic;

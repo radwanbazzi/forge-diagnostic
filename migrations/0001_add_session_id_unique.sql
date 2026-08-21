@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `diagnostics_session_id_unique` ON `diagnostics` (`session_id`);
