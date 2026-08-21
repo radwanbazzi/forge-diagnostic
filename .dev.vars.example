@@ -3,3 +3,14 @@
 # In production these are set with `wrangler secret put <NAME>`.
 WHATSAPP_NUMBER="9610000000"
 WHISH_LINK="https://whish.money/pay/REPLACE_ME"
+
+# The single allowed admin email (the founder).
+ADMIN_EMAIL="founder@example.com"
+
+# LOCAL-DEV ONLY shared secret for the admin route bypass used in testing.
+# NEVER set DEV_ADMIN_SECRET in production. The bypass is also force-disabled when ACCESS_AUD is set.
+DEV_ADMIN_SECRET="local-dev-secret-change-me"
+
+# Production-only (leave unset locally): Cloudflare Access verification.
+# ACCESS_TEAM_DOMAIN="https://<your-team>.cloudflareaccess.com"
+# ACCESS_AUD="<your-access-application-AUD-tag>"

@@ -20,6 +20,20 @@ export interface Bindings {
 	WHATSAPP_NUMBER: string;
 	/** Whish payment link shown on the result screen. */
 	WHISH_LINK: string;
+
+	// ── Admin auth (Cloudflare Access) — see src/lib/access.ts ──
+	/** The single allowed admin email (the founder). Required for any admin auth. */
+	ADMIN_EMAIL?: string;
+	/** Cloudflare Access team domain, e.g. "https://forge.cloudflareaccess.com" (production). */
+	ACCESS_TEAM_DOMAIN?: string;
+	/** Cloudflare Access application AUD tag (production). Its presence marks "production". */
+	ACCESS_AUD?: string;
+	/**
+	 * LOCAL-DEV ONLY shared secret enabling the header-based admin bypass for testing.
+	 * Lives only in .dev.vars (gitignored); NEVER set in production. The bypass is also
+	 * force-disabled whenever ACCESS_AUD is set, so it cannot authenticate in production.
+	 */
+	DEV_ADMIN_SECRET?: string;
 }
 
 /** Hono generic env: binds `c.env` to our `Bindings`. */
