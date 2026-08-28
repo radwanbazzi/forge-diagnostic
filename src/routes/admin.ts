@@ -17,10 +17,10 @@
  * ── PATCH /api/admin/leads/:id ─ (B5) · GET /api/admin/analytics ─ (B6): stubs, behind auth.
  */
 import { Hono } from 'hono';
-import { and, count, desc, eq, gte, like, lte, type SQL } from 'drizzle-orm';
+import { and, count, countDistinct, desc, eq, gte, like, lte, type SQL } from 'drizzle-orm';
 import type { HonoEnv } from '../types';
 import { getDb } from '../db/client';
-import { diagnostics } from '../db/schema';
+import { diagnostics, events as eventsTable } from '../db/schema';
 import { requireAdmin } from '../lib/access';
 import { buildFounderWhatsAppMessage } from '../lib/whatsapp';
 import { leadUpdateSchema } from '../lib/validation';
@@ -192,7 +192,63 @@ admin.patch('/leads/:id', async (c) => {
 	}
 });
 
-// ── still stubbed (contract-first), behind auth so unauthenticated → 401 ──
-admin.get('/analytics', (c) => c.json({ error: 'not_implemented', endpoint: 'GET /api/admin/analytics', milestone: 'B6' }, 501));
+// GET /api/admin/analytics — funnel metrics (B6, PRD §11). Simple COUNT/GROUP BY only (F7.2).
+admin.get('/analytics', async (c) => {
+	const pct = (num: number, den: number) => (den === 0 ? 0 : Math.round((num / den) * 10000) / 10000);
+
+	try {
+		const db = getDb(c.env);
+
+		// Distinct sessions per event type (one aggregate query).
+		const byType = await db
+			.select({ type: eventsTable.type, sessions: countDistinct(eventsTable.session_id) })
+			.from(eventsTable)
+			.groupBy(eventsTable.type);
+		const evt: Record<string, number> = {};
+		for (const r of byType) evt[r.type] = r.sessions;
+		const started = evt.start ?? 0;
+		const completed = evt.completed ?? 0;
+		const whatsapp_clicked = evt.whatsapp_clicked ?? 0;
+
+		// Per-question drop-off: distinct sessions that reached each question (advance events).
+		const funnelRows = await db
+			.select({ question_index: eventsTable.question_index, count: countDistinct(eventsTable.session_id) })
+			.from(eventsTable)
+			.where(eq(eventsTable.type, 'advance'))
+			.groupBy(eventsTable.question_index)
+			.orderBy(eventsTable.question_index);
+		const funnel_by_question = funnelRows
+			.filter((r) => r.question_index !== null)
+			.map((r) => ({ question_index: r.question_index as number, count: r.count }));
+
+		// Status mix + total leads (from the diagnostics table).
+		const statusRows = await db.select({ status: diagnostics.lead_status, n: count() }).from(diagnostics).groupBy(diagnostics.lead_status);
+		const status_mix = { HOT: 0, WARM: 0, COLD: 0 };
+		let totalLeads = 0;
+		for (const r of statusRows) {
+			if (r.status === 'HOT' || r.status === 'WARM' || r.status === 'COLD') status_mix[r.status] = r.n;
+			totalLeads += r.n;
+		}
+
+		// Enrolments (from the outcome field).
+		const outcomeRows = await db.select({ outcome: diagnostics.outcome, n: count() }).from(diagnostics).groupBy(diagnostics.outcome);
+		let enrolled = 0;
+		for (const r of outcomeRows) if (r.outcome?.startsWith('Enrolled')) enrolled += r.n;
+
+		return c.json({
+			started,
+			completed,
+			completion_rate: pct(completed, started),
+			funnel_by_question,
+			status_mix,
+			whatsapp_click_rate: pct(whatsapp_clicked, completed),
+			enrollment_rate: pct(enrolled, totalLeads),
+			totals: { leads: totalLeads, enrolled, whatsapp_clicked },
+		});
+	} catch (err) {
+		console.error('admin: analytics failed', err);
+		return c.json({ error: 'server_error' }, 500);
+	}
+});
 
 export default admin;

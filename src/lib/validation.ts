@@ -73,3 +73,16 @@ export const leadUpdateSchema = z
 	.refine((o) => Object.keys(o).length > 0, { message: 'no updatable fields provided' });
 
 export type LeadUpdate = z.infer<typeof leadUpdateSchema>;
+
+// ── POST /api/event — analytics beacon (BACKEND_SPEC §1 US-7, §4; PRD §11) ──
+export const EVENT_TYPES = ['start', 'advance', 'contact_reached', 'completed', 'whatsapp_clicked'] as const;
+
+/** A single analytics beacon. Lenient (unknown keys stripped) — a bad beacon is never fatal. */
+export const eventSchema = z.object({
+	session_id: z.string().trim().min(1),
+	type: z.enum(EVENT_TYPES),
+	question_index: z.number().int().nonnegative().optional(),
+	meta: z.record(z.string(), z.unknown()).optional(),
+});
+
+export type DiagnosticEvent = z.infer<typeof eventSchema>;
