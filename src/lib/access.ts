@@ -50,6 +50,29 @@ function jwksFor(teamDomain: string): JWTVerifyGetKey {
 	return resolver;
 }
 
+/**
+ * The local-dev bypass is allowed ONLY in a non-production configuration:
+ *   - `ACCESS_AUD` is NOT set (production sets it), AND
+ *   - `DEV_ADMIN_SECRET` IS set (lives only in .dev.vars, never deployed).
+ * Both must hold, so the bypass is provably impossible in production.
+ */
+export function devBypassAllowed(env: { ACCESS_AUD?: string; DEV_ADMIN_SECRET?: string }): boolean {
+	return !env.ACCESS_AUD && !!env.DEV_ADMIN_SECRET;
+}
+
+/** Resolve a dev-bypass identity from request headers, or null (always null in production). */
+export function checkDevBypass(
+	env: { ACCESS_AUD?: string; DEV_ADMIN_SECRET?: string; ADMIN_EMAIL?: string },
+	secretHeader: string | undefined,
+	emailHeader: string | undefined,
+): AdminIdentity | null {
+	if (!devBypassAllowed(env) || !env.ADMIN_EMAIL) return null;
+	if (secretHeader === env.DEV_ADMIN_SECRET && emailHeader && emailHeader.toLowerCase() === env.ADMIN_EMAIL.toLowerCase()) {
+		return { email: emailHeader.toLowerCase(), via: 'dev' };
+	}
+	return null;
+}
+
 export type AuthResult = { ok: true; identity: AdminIdentity } | { ok: false };
 
 /** Resolve the authenticated admin for a request, or `{ ok: false }`. */
@@ -70,14 +93,9 @@ export async function authenticateAdmin(c: Context<HonoEnv>): Promise<AuthResult
 		if (identity) return { ok: true, identity };
 	}
 
-	// 2) Local-dev bypass — only when NOT production-configured and the dev secret is set.
-	if (!env.ACCESS_AUD && env.DEV_ADMIN_SECRET) {
-		const secret = c.req.header('X-Dev-Access-Secret');
-		const email = c.req.header('X-Dev-Access-Email');
-		if (secret === env.DEV_ADMIN_SECRET && email && email.toLowerCase() === adminEmail.toLowerCase()) {
-			return { ok: true, identity: { email: email.toLowerCase(), via: 'dev' } };
-		}
-	}
+	// 2) Local-dev bypass — provably off in production (see devBypassAllowed).
+	const dev = checkDevBypass(env, c.req.header('X-Dev-Access-Secret'), c.req.header('X-Dev-Access-Email'));
+	if (dev) return { ok: true, identity: dev };
 
 	return { ok: false };
 }

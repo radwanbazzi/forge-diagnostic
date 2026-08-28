@@ -12,7 +12,15 @@ export default defineConfig({
 			return {
 				wrangler: { configPath: './wrangler.jsonc' },
 				miniflare: {
-					bindings: { TEST_MIGRATIONS: migrations },
+					// Test env values (so tests don't depend on .dev.vars and CI runs green).
+					// ACCESS_AUD is intentionally unset → the local-dev admin bypass is active in tests.
+					bindings: {
+						TEST_MIGRATIONS: migrations,
+						ADMIN_EMAIL: 'founder@example.com',
+						DEV_ADMIN_SECRET: 'local-dev-secret-change-me',
+						WHATSAPP_NUMBER: '9610000000',
+						WHISH_LINK: 'https://whish.money/pay/test',
+					},
 				},
 			};
 		}),

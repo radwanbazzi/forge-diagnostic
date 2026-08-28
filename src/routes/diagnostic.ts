@@ -23,10 +23,22 @@ import { diagnostics } from '../db/schema';
 import { submissionSchema } from '../lib/validation';
 import { isValidComputed, score } from '../lib/scoring';
 import { buildResultPayload } from '../lib/resultCopy';
+import { checkRateLimit } from '../lib/rateLimit';
 
 const diagnostic = new Hono<HonoEnv>();
 
+// Public-POST rate limit: 30 submissions per minute per IP. A real student submits once;
+// this is generous while stopping abuse. Best-effort per-isolate (see rateLimit.ts).
+const SUBMIT_RATE_LIMIT = 30;
+const SUBMIT_RATE_WINDOW_MS = 60_000;
+
 diagnostic.post('/submit', async (c) => {
+	// Hardening: drop a per-IP flood before doing any work (429, never 500).
+	const ip = c.req.header('cf-connecting-ip') || 'local';
+	if (!checkRateLimit(`submit:${ip}`, Date.now(), SUBMIT_RATE_LIMIT, SUBMIT_RATE_WINDOW_MS)) {
+		return c.json({ error: 'rate_limited' }, 429);
+	}
+
 	// F1.3 — malformed JSON.
 	let body: unknown;
 	try {

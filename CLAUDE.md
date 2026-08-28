@@ -67,7 +67,12 @@ npm run db:migrate:remote   # apply migrations to the REMOTE/prod D1 (needs real
 
 ## Status
 
-- **B0 (scaffold + /api/health): done.**
-- **B1 (D1 + schema + migration): done** (local). `database_id` in `wrangler.jsonc` is a
-  placeholder until `wrangler d1 create forge_diagnostic` is run and the real id pasted in.
-- **Next: B2 — scoring engine + golden tests** (do not start until owner confirms).
+- **Backend B0–B7: done.** All `/api/*` endpoints implemented, hardened, and tested
+  (typecheck clean; full Vitest suite green). CI (`.github/workflows/ci.yml`) runs
+  typecheck + tests + build; `@claude` PR review via Pro OAuth (never an API key).
+- **Deploy is pending owner action** (see README "Deploy checklist"): `database_id` in
+  `wrangler.jsonc` is still a placeholder, and the production secrets + Cloudflare Access
+  application must be set up. The dev-only admin bypass (`.dev.vars` `DEV_ADMIN_SECRET`) is
+  force-disabled once `ACCESS_AUD` is set.
+- **Next: the frontend phase (F-M0 → F-M4, PRD §18)** — do not start until the owner confirms.
+  Never import `src/lib/answerKey.ts` from anything under `web/`.
