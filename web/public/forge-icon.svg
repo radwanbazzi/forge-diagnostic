@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<rect width="512" height="512" rx="112" fill="#141414"/>
+<text x="256" y="316" text-anchor="middle" font-family="'Anton','Arial Narrow','Liberation Sans Narrow',Arial,sans-serif" font-weight="900" font-size="300" textLength="150" lengthAdjust="spacingAndGlyphs" fill="#F3F1EC">F</text>
+<line x1="176" y1="388" x2="336" y2="388" stroke="#F3F1EC" stroke-width="6"/>
+<g stroke="#F3F1EC" stroke-width="4">
+<line x1="176" y1="380" x2="176" y2="396"/><line x1="216" y1="382" x2="216" y2="394"/><line x1="256" y1="382" x2="256" y2="394"/><line x1="296" y1="382" x2="296" y2="394"/><line x1="336" y1="380" x2="336" y2="396"/>
+</g>
+<polygon points="300,388 340,388 320,362" fill="#E5341F"/>
+</svg>

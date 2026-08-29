@@ -24,8 +24,11 @@
 			"database_id": "00000000-0000-0000-0000-000000000000",
 			"migrations_dir": "migrations"
 		}
-	]
+	],
 
-	// Static assets (Astro `web/dist`) are wired up in the frontend phase (F-M0):
-	// "assets": { "directory": "web/dist", "binding": "ASSETS" }
+	// Static assets (F-M0): the built Astro landing in web/dist is served for matching
+	// paths; every other request (e.g. /api/*) runs the Worker. Same origin, no CORS.
+	"assets": {
+		"directory": "./web/dist"
+	}
 }

@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-pool-workers';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	plugins: [
@@ -27,5 +27,8 @@ export default defineConfig({
 	],
 	test: {
 		setupFiles: ['./test/apply-migrations.ts'],
+		// Only run this project's tests — never scan into git worktrees (.claude/worktrees/*)
+		// or the Astro app, which would run duplicate copies of the suite.
+		exclude: [...configDefaults.exclude, '**/.claude/**', 'web/**'],
 	},
 });

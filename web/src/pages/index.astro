@@ -1,0 +1,265 @@
+---
+const title = 'Forge SAT Diagnostic — See where your SAT score really stands';
+const description =
+	'A free, ~8-minute SAT diagnostic. Get your estimated score range, your real bottleneck, and your top 3 fixes — instantly, on screen. The full breakdown is free, with nothing to unlock.';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<meta name="robots" content="index,follow" />
+		<meta name="theme-color" content="#F2EFE6" />
+		<meta property="og:type" content="website" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<link rel="icon" href="/forge-icon.svg" type="image/svg+xml" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600;700&display=swap"
+			rel="stylesheet"
+		/>
+		<style is:global>
+			:root {
+				--bone: #f2efe6;
+				--ink: #141310;
+				--molten: #d4331f;
+				--amber: #c9a227;
+				--grey: #8a857a;
+				--rule: #e3ddcf;
+				--ink-soft: #4a443b;
+			}
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+			html {
+				-webkit-text-size-adjust: 100%;
+			}
+			body {
+				background: var(--bone);
+				color: var(--ink);
+				font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+				font-size: 17px;
+				line-height: 1.55;
+				-webkit-font-smoothing: antialiased;
+				text-rendering: optimizeLegibility;
+			}
+			.wrap {
+				max-width: 680px;
+				margin: 0 auto;
+				padding: 0 20px;
+			}
+			.mono {
+				font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+			}
+
+			/* Header / logo */
+			header {
+				padding: 30px 0 14px;
+				text-align: center; /* horizontally centers the inline logo */
+			}
+			.logo {
+				display: inline-block;
+				width: clamp(148px, 44vw, 208px); /* ~150px on mobile, scales up tastefully */
+				height: auto;
+			}
+
+			/* Hero */
+			.hero {
+				padding: 34px 0 8px;
+			}
+			.eyebrow {
+				font-family: 'IBM Plex Mono', monospace;
+				font-weight: 500;
+				font-size: 12.5px;
+				letter-spacing: 0.2em;
+				text-transform: uppercase;
+				color: var(--molten);
+				margin-bottom: 16px;
+			}
+			h1 {
+				font-family: Anton, Impact, 'Arial Narrow', sans-serif;
+				font-weight: 400;
+				text-transform: uppercase;
+				font-size: clamp(40px, 11.5vw, 62px);
+				line-height: 0.96;
+				letter-spacing: 0.005em;
+				margin-bottom: 20px;
+			}
+			h1 .accent {
+				color: var(--molten);
+			}
+			.subhead {
+				font-size: clamp(17px, 4.3vw, 20px);
+				color: var(--ink-soft);
+				max-width: 40ch;
+				margin-bottom: 28px;
+			}
+
+			/* CTA */
+			.cta {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.55em;
+				background: var(--molten);
+				color: #fff;
+				font-weight: 600;
+				font-size: 18px;
+				text-decoration: none;
+				padding: 17px 28px;
+				border-radius: 11px;
+				min-height: 56px;
+				box-shadow: 0 2px 0 #a5290f;
+				transition: transform 0.05s ease;
+			}
+			.cta:hover {
+				background: #c02d1a;
+			}
+			.cta:active {
+				transform: translateY(1px);
+				box-shadow: 0 1px 0 #a5290f;
+			}
+			.cta .arrow {
+				font-size: 20px;
+			}
+			.meta {
+				font-family: 'IBM Plex Mono', monospace;
+				font-size: 12.5px;
+				letter-spacing: 0.02em;
+				color: var(--grey);
+				margin-top: 18px;
+			}
+
+			/* Discover */
+			.discover {
+				margin-top: 58px;
+				border-top: 2px solid var(--rule);
+				padding-top: 36px;
+			}
+			h2 {
+				font-family: Anton, Impact, sans-serif;
+				font-weight: 400;
+				text-transform: uppercase;
+				font-size: clamp(23px, 6.5vw, 30px);
+				letter-spacing: 0.01em;
+				margin-bottom: 26px;
+			}
+			.benefits {
+				list-style: none;
+				display: grid;
+				gap: 22px;
+			}
+			.benefits li {
+				display: grid;
+				grid-template-columns: 34px 1fr;
+				gap: 16px;
+				align-items: start;
+			}
+			.num {
+				font-family: 'IBM Plex Mono', monospace;
+				font-weight: 500;
+				font-size: 14px;
+				color: var(--molten);
+				border: 1.5px solid var(--molten);
+				border-radius: 7px;
+				height: 32px;
+				display: grid;
+				place-items: center;
+				margin-top: 1px;
+			}
+			.benefits .lead {
+				color: var(--ink);
+				font-weight: 600;
+			}
+			.benefits p {
+				color: var(--ink-soft);
+			}
+
+			/* Trust */
+			.trust {
+				margin-top: 46px;
+				background: #ebe6d8;
+				border: 1px solid var(--rule);
+				border-radius: 12px;
+				padding: 18px 20px;
+				font-size: 15px;
+				color: var(--ink-soft);
+			}
+
+			.closing {
+				margin-top: 40px;
+				padding-bottom: 8px;
+			}
+
+			footer {
+				border-top: 2px solid var(--rule);
+				margin-top: 48px;
+				padding: 24px 0 44px;
+				color: var(--grey);
+				font-family: 'IBM Plex Mono', monospace;
+				font-size: 13px;
+				letter-spacing: 0.02em;
+			}
+		</style>
+	</head>
+
+	<body>
+		<header class="wrap">
+			<img class="logo" src="/forge-logo-primary.svg" alt="Forge" width="900" height="360" />
+		</header>
+
+		<main>
+			<section class="hero wrap">
+				<p class="eyebrow">Free SAT diagnostic</p>
+				<h1>See where you <span class="accent">really</span> stand on the SAT.</h1>
+				<p class="subhead">
+					In about 8 minutes, get your estimated score range, the one thing quietly costing you points, and exactly what to fix
+					next. The full breakdown is free — nothing to unlock.
+				</p>
+				<a class="cta" href="/diagnostic">Start my free diagnostic <span class="arrow" aria-hidden="true">→</span></a>
+				<p class="meta">~22 questions · about 8 minutes · your result appears instantly on screen</p>
+			</section>
+
+			<section class="discover wrap" aria-labelledby="discover-title">
+				<h2 id="discover-title">What you'll discover</h2>
+				<ul class="benefits">
+					<li>
+						<span class="num">1</span>
+						<p><span class="lead">Your estimated SAT range</span> — a realistic score band based on your answers, not a guess.</p>
+					</li>
+					<li>
+						<span class="num">2</span>
+						<p><span class="lead">Your profile</span> — the kind of test-taker you are right now, in plain language.</p>
+					</li>
+					<li>
+						<span class="num">3</span>
+						<p><span class="lead">Your real bottleneck</span> — the one thing quietly costing you the most points.</p>
+					</li>
+					<li>
+						<span class="num">4</span>
+						<p><span class="lead">Your top 3 fixes</span> — ranked, specific, and doable, so you know exactly what to work on.</p>
+					</li>
+				</ul>
+			</section>
+
+			<section class="wrap">
+				<p class="trust">
+					Your answers are private. We use your details only to send your results and helpful Forge updates on WhatsApp —
+					never shared, never sold.
+				</p>
+			</section>
+
+			<section class="closing wrap">
+				<a class="cta" href="/diagnostic">Start my free diagnostic <span class="arrow" aria-hidden="true">→</span></a>
+			</section>
+		</main>
+
+		<footer class="wrap">Forge · SAT preparation</footer>
+	</body>
+</html>
