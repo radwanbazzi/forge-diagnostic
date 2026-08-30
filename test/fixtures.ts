@@ -42,15 +42,15 @@ export const RAMI: Golden = {
 	expected: {
 		math_raw: 5,
 		rw_raw: 6,
-		overall_band: '1150-1320',
+		overall_band: '1040-1200', // Official 1100–1299 override (§7.3, lowered)
 		confidence: 'Moderate',
 		archetype: 'Plateaued Retaker',
 		target_num: 1400,
-		current_mid: 1235,
-		gap: 165,
+		current_mid: 1120, // midpoint of 1040-1200
+		gap: 280, // 1400 - 1120
 		timeline_verdict: 'Aggressive',
 		recommended_program: '$130 SAT Accelerator',
-		lead_score: 11,
+		lead_score: 11, // gap 280 ≥150 → gap sub-score 3 (unchanged)
 		lead_status: 'HOT',
 	},
 };
@@ -79,15 +79,15 @@ export const LINA: Golden = {
 	expected: {
 		math_raw: 6,
 		rw_raw: 6,
-		overall_band: '1120-1300',
+		overall_band: '960-1120', // Practice 1100–1299 override (§7.3, lowered)
 		confidence: 'Low-Moderate',
 		archetype: 'Time-Pressured',
 		target_num: 1300,
-		current_mid: 1210,
-		gap: 90,
+		current_mid: 1040, // midpoint of 960-1120
+		gap: 260, // 1300 - 1040 (was 90 — the lowered band widened the gap)
 		timeline_verdict: 'Comfortable',
 		recommended_program: '$130 SAT Accelerator',
-		lead_score: 6.5,
+		lead_score: 7.5, // gap 260 now ≥150 → gap sub-score 3 (was 2 at gap 90) → +1
 		lead_status: 'WARM',
 	},
 };
@@ -116,11 +116,11 @@ export const KARIM: Golden = {
 	expected: {
 		math_raw: 2,
 		rw_raw: 4,
-		overall_band: '880-1100',
+		overall_band: '650-790', // never taken → estimate: raw2 [270,340] + raw4 [380,450] (§7.2, lowered)
 		confidence: 'Low',
 		archetype: 'Untested Unknown',
 		target_num: 0,
-		current_mid: 990,
+		current_mid: 720, // midpoint of 650-790
 		gap: null,
 		timeline_verdict: 'Early / lots of runway',
 		recommended_program: '$80 SAT Essentials',

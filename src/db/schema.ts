@@ -53,7 +53,7 @@ export const diagnostics = sqliteTable('diagnostics', {
 	// computed (snapshot at submit — never recomputed on read, PRD F12)
 	math_raw: integer('math_raw').notNull(),
 	rw_raw: integer('rw_raw').notNull(),
-	overall_band: text('overall_band').notNull(), // e.g. "1150-1320"
+	overall_band: text('overall_band').notNull(), // e.g. "1040-1200"
 	confidence: text('confidence', { enum: ['Moderate', 'Low-Moderate', 'Low'] }).notNull(),
 	archetype: text('archetype', {
 		enum: [

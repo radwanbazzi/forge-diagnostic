@@ -56,14 +56,14 @@ describe('golden cases (PRD §17)', () => {
 // ─── edge cases ───────────────────────────────────────────────────────────────
 
 describe('prior-score band override (§7.3) + confidence (§7.4)', () => {
-	// All answers wrong (raw 0/0 → estimate 800-1040), so any non-estimate band proves override.
+	// All answers wrong (raw 0/0 → estimate 400-520), so any non-estimate band proves override.
 	const cases: Array<[string, string, Computed['confidence']]> = [
-		['Official SAT — 1300+', '1300-1500', 'Moderate'],
-		['Official SAT — 1100–1299', '1150-1320', 'Moderate'],
-		['Official SAT — under 1100', '980-1120', 'Moderate'],
-		['Practice only — 1300+', '1250-1450', 'Low-Moderate'],
-		['Practice only — 1100–1299', '1120-1300', 'Low-Moderate'],
-		['Practice only — under 1100', '950-1120', 'Low-Moderate'],
+		['Official SAT — 1300+', '1250-1400', 'Moderate'],
+		['Official SAT — 1100–1299', '1040-1200', 'Moderate'],
+		['Official SAT — under 1100', '900-1040', 'Moderate'],
+		['Practice only — 1300+', '1080-1240', 'Low-Moderate'],
+		['Practice only — 1100–1299', '960-1120', 'Low-Moderate'],
+		['Practice only — under 1100', '840-1000', 'Low-Moderate'],
 	];
 
 	for (const [sat_history, band, confidence] of cases) {
@@ -75,24 +75,38 @@ describe('prior-score band override (§7.3) + confidence (§7.4)', () => {
 	}
 
 	it('never taken → estimated band from raw (no override)', () => {
-		expect(score({ answers: baseAnswers(), contact: {} }).overall_band).toBe('800-1040');
+		expect(score({ answers: baseAnswers(), contact: {} }).overall_band).toBe('400-520'); // raw0 [200,260] ×2
 	});
 });
 
 describe('estimated band from raw sections (§7.2)', () => {
-	it('all correct, never taken → 1240-1480', () => {
+	it('PERFECT run (16/16) + never taken → 1400-1500 (special top band)', () => {
 		const result = score({ answers: baseAnswers(CORRECT), contact: {} });
 		expect(result.math_raw).toBe(8);
 		expect(result.rw_raw).toBe(8);
-		expect(result.overall_band).toBe('1240-1480'); // [620,740] + [620,740]
+		expect(result.overall_band).toBe('1400-1500'); // only route to the top band via estimate
 	});
 
-	it('math_raw=3, rw_raw=5, never taken → 1030-1240', () => {
-		// math: q5(1)+q7(2)=3 → [480,580]; rw: q10(2)+q12(3)=5 → [550,660]
+	it('one wrong (15/16) + never taken → drops to the curve (NOT 1400-1500)', () => {
+		// Drop the R&W 1-pointer (q6) → math 8, rw 7 → raw8 [680,720] + raw7 [560,610]
+		const result = score({ answers: baseAnswers({ ...CORRECT, q6: 'A) Nevertheless' }), contact: {} });
+		expect(result.math_raw).toBe(8);
+		expect(result.rw_raw).toBe(7);
+		expect(result.overall_band).toBe('1240-1330');
+	});
+
+	it('16/16 but a PRIOR score → override wins, no perfect-run bonus', () => {
+		// Perfect answers, but Official 1300+ was reported → prior-score band, not 1400-1500.
+		const result = score({ answers: baseAnswers({ ...CORRECT, sat_history: 'Official SAT — 1300+' }), contact: {} });
+		expect(result.overall_band).toBe('1250-1400');
+	});
+
+	it('math_raw=3, rw_raw=5, never taken → 760-890', () => {
+		// math: q5(1)+q7(2)=3 → [320,390]; rw: q10(2)+q12(3)=5 → [440,500]
 		const result = score({ answers: baseAnswers({ q5: CORRECT.q5, q7: CORRECT.q7, q10: CORRECT.q10, q12: CORRECT.q12 }), contact: {} });
 		expect(result.math_raw).toBe(3);
 		expect(result.rw_raw).toBe(5);
-		expect(result.overall_band).toBe('1030-1240');
+		expect(result.overall_band).toBe('760-890');
 	});
 });
 
@@ -142,7 +156,7 @@ describe('target number, current_mid, and null gap (§7.6/§7.7)', () => {
 	it('gap is null when target is "Not sure yet" (even with a computed band)', () => {
 		const result = score({ answers: baseAnswers({ sat_history: 'Official SAT — 1100–1299', target_score: 'Not sure yet' }), contact: {} });
 		expect(result.target_num).toBe(0);
-		expect(result.current_mid).toBe(1235); // midpoint of 1150-1320
+		expect(result.current_mid).toBe(1120); // midpoint of 1040-1200
 		expect(result.gap).toBeNull();
 	});
 

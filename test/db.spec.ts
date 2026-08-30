@@ -40,24 +40,24 @@ describe('D1 schema round-trip', () => {
 			// computed snapshot
 			math_raw: 5,
 			rw_raw: 6,
-			overall_band: '1150-1320',
+			overall_band: '1040-1200',
 			confidence: 'Moderate',
 			archetype: 'Plateaued Retaker',
 			target_num: 1400,
-			current_mid: 1235,
-			gap: 165,
+			current_mid: 1120,
+			gap: 280,
 			timeline_verdict: 'Aggressive',
 			recommended_program: '$130 SAT Accelerator',
 			lead_score: 11,
 			lead_status: 'HOT',
-			result_payload: JSON.stringify({ overall_band: '1150-1320' }),
+			result_payload: JSON.stringify({ overall_band: '1040-1200' }),
 		});
 
 		const [row] = await db.select().from(diagnostics).where(eq(diagnostics.id, id));
 		expect(row).toBeDefined();
 		expect(row.session_id).toBe('sess-roundtrip');
 		expect(row.lead_status).toBe('HOT');
-		expect(row.gap).toBe(165);
+		expect(row.gap).toBe(280);
 		// created_at auto-filled with a unix-ms timestamp
 		expect(typeof row.created_at).toBe('number');
 		expect(row.created_at).toBeGreaterThan(0);

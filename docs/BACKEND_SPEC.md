@@ -184,7 +184,7 @@ export default app;
 | consent | integer | 0/1, must be 1 |
 | **computed (snapshot at submit)** | | |
 | math_raw, rw_raw | integer | |
-| overall_band | text | e.g. "1150-1320" |
+| overall_band | text | e.g. "1040-1200" |
 | confidence | text | Moderate \| Low-Moderate \| Low |
 | archetype | text | one of 5 |
 | target_num, current_mid | integer | |
@@ -257,9 +257,9 @@ All JSON. Base path `/api`. Admin routes require a valid Cloudflare Access ident
 ## 5. Scoring Engine (reference — full detail in PRD §7)
 
 Implement `lib/scoring.ts` as a **pure** function `score(answers) → Computed`, unit-tested to reproduce the reference spreadsheet exactly. Non-negotiable golden tests (PRD §17):
-- **Rami** → band `1150-1320`, Moderate, **Plateaued Retaker**, gap 165, **Aggressive**, **$130 Accelerator**, lead 11, **HOT**.
-- **Lina** → band `1120-1300`, Low-Moderate, **Time-Pressured**, gap 90, **Comfortable**, **$130 Accelerator**, lead 6.5, **WARM**.
-- **Karim** → band `880-1100`, Low, **Untested Unknown**, gap null, **Early / lots of runway**, **$80 Essentials**, lead 4, **COLD**.
+- **Rami** → band `1040-1200`, Moderate, **Plateaued Retaker**, gap 280, **Aggressive**, **$130 Accelerator**, lead 11, **HOT**.
+- **Lina** → band `960-1120`, Low-Moderate, **Time-Pressured**, gap 260, **Comfortable**, **$130 Accelerator**, lead 7.5, **WARM**.
+- **Karim** → band `650-790`, Low, **Untested Unknown**, gap null, **Early / lots of runway**, **$80 Essentials**, lead 4, **COLD**.
 Answer key + point values, band mapping, prior-score override, archetype precedence (top-down, first match), lead score, and program mapping are all specified in PRD §7.1–7.10. Match answers on the **leading letter** of the option string (`"C) 300" → "C"`).
 
 ---

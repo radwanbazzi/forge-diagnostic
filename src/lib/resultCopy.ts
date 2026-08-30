@@ -175,6 +175,15 @@ export function buildResultPayload(
 					guarantee: null,
 				};
 
+	// Target-aware framing (§8): when the student named a target AND their estimate falls
+	// short of it, name the gap explicitly and position Forge as the bridge. This is COPY
+	// ONLY — it reads the already-computed band/current_mid/gap and NEVER changes them, so
+	// two identical answer sets with different targets still get the same band. "Not sure"
+	// (target_num 0 → gap null) or an estimate already at/above target → no gap line.
+	if (computed.target_num > 0 && computed.gap !== null && computed.gap > 0) {
+		recommendation.text += ` You're aiming for ${computed.target_num}, and your estimate sits around ${computed.current_mid}. That's a ${computed.gap}-point gap — exactly the kind of distance a structured Forge plan is built to close.`;
+	}
+
 	const prefill = `Hi Forge! I just finished the SAT diagnostic. I'm ${firstName}, my profile is "${computed.archetype}" and my estimated range is ${computed.overall_band}. Can you tell me about the ${computed.recommended_program}?`;
 
 	return {

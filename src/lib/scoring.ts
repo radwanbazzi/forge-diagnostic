@@ -9,7 +9,7 @@
  * "1300"/"under"/"1100-1299", the target numbers, "5-8"/"2-4", "school", …).
  * The golden cases in test/scoring.test.ts (PRD §17) are the proof of correctness.
  */
-import { ANSWER_KEY, type ScoredQuestion } from './answerKey';
+import { ANSWER_KEY, MAX_SECTION_RAW, type ScoredQuestion } from './answerKey';
 import { computeLeadScore, leadStatus, recommendProgram } from './leadScore';
 import { normalizeOption } from './normalize';
 import type { Answers, Computed, ScoreInput } from '../types';
@@ -51,12 +51,33 @@ function scoreRaw(a: Answers): RawResult {
 	return { math_raw, rw_raw, correct };
 }
 
-/** §7.2 section band [low, high] from a raw score of 8 (ref Z2/AA2 + AB2/AC2). */
+/**
+ * §7.2 section band [low, high] from a raw section score of 0–8 (each section of 8).
+ * Per-point curve (lowered from v1). A raw 8 in a single section can still occur in a
+ * non-perfect total (15/16 = 8 + 7); the 16/16 "perfect run" is handled separately in
+ * score() (top band 1400-1500), so it is NOT baked into this table.
+ */
 function sectionBand(raw: number): [number, number] {
-	if (raw <= 2) return [400, 520];
-	if (raw <= 4) return [480, 580];
-	if (raw <= 6) return [550, 660];
-	return [620, 740]; // 7–8
+	switch (raw) {
+		case 8:
+			return [680, 720];
+		case 7:
+			return [560, 610];
+		case 6:
+			return [500, 560];
+		case 5:
+			return [440, 500];
+		case 4:
+			return [380, 450];
+		case 3:
+			return [320, 390];
+		case 2:
+			return [270, 340];
+		case 1:
+			return [230, 300];
+		default:
+			return [200, 260]; // 0
+	}
 }
 
 type HistoryType = 'official' | 'practice' | 'never' | 'unknown';
@@ -89,15 +110,15 @@ function classifyHistory(satHistory: string): History {
 function overallBand(history: History, estLow: number, estHigh: number): string {
 	const estimate = `${estLow}-${estHigh}`;
 	if (history.type === 'official') {
-		if (history.bucket === 'high') return '1300-1500';
-		if (history.bucket === 'low') return '980-1120';
-		if (history.bucket === 'mid') return '1150-1320';
+		if (history.bucket === 'high') return '1250-1400';
+		if (history.bucket === 'low') return '900-1040';
+		if (history.bucket === 'mid') return '1040-1200';
 		return estimate; // official but no readable bucket → fall back to estimate
 	}
 	if (history.type === 'practice') {
-		if (history.bucket === 'high') return '1250-1450';
-		if (history.bucket === 'low') return '950-1120';
-		if (history.bucket === 'mid') return '1120-1300';
+		if (history.bucket === 'high') return '1080-1240';
+		if (history.bucket === 'low') return '840-1000';
+		if (history.bucket === 'mid') return '960-1120';
 		return estimate;
 	}
 	return estimate; // never taken / unknown → estimated band
@@ -177,7 +198,14 @@ export function score(input: ScoreInput): Computed {
 	const estHigh = mathHigh + rwHigh;
 
 	const history = classifyHistory(answers.sat_history);
-	const overall_band = overallBand(history, estLow, estHigh);
+
+	// §7.2 special rule: a PERFECT run — full marks in BOTH sections (16/16) AND no prior
+	// score reported (never tested) — is the ONLY way to reach the top band via the estimate.
+	// Any single wrong answer drops to the per-point curve above. A reported prior score
+	// always defers to the §7.3 override instead (so this cannot fire for official/practice).
+	const perfectRun =
+		raw.math_raw === MAX_SECTION_RAW && raw.rw_raw === MAX_SECTION_RAW && history.type === 'never';
+	const overall_band = perfectRun ? '1400-1500' : overallBand(history, estLow, estHigh);
 	const confidence = confidenceOf(history);
 	const archetype = archetypeOf(answers, raw, history);
 

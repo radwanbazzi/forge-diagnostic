@@ -157,7 +157,7 @@ Login (Cloudflare Access — gates /admin to founder's email; no app-level passw
 | **Computed (snapshot)** | | |
 | math_raw | integer | |
 | rw_raw | integer | |
-| overall_band | text | e.g. "1150-1320" |
+| overall_band | text | e.g. "1040-1200" |
 | confidence | text | Moderate \| Low-Moderate \| Low |
 | archetype | text | one of the 5 |
 | target_num | integer | |
@@ -206,17 +206,35 @@ Implement as one pure module `src/lib/scoring.ts`, no I/O, fully unit-tested. In
 Match on the leading letter of the stored option (`"C) 300"` -> `"C"`). `math_raw` max 8, `rw_raw` max 8. Answer key lives in `src/lib/answerKey.ts` (server bundle only).
 
 ### 7.2 Section band from raw (each section, of 8)
-`0-2 -> 400-520 · 3-4 -> 480-580 · 5-6 -> 550-660 · 7-8 -> 620-740`
+Per-point curve (each section, raw 0-8 -> `[low-high]`):
+
+| raw | band | raw | band |
+|---|---|---|---|
+| 8 | `680-720` | 3 | `320-390` |
+| 7 | `560-610` | 2 | `270-340` |
+| 6 | `500-560` | 1 | `230-300` |
+| 5 | `440-500` | 0 | `200-260` |
+| 4 | `380-450` | | |
+
 `est_low` = sum of section lows; `est_high` = sum of section highs.
 
+**Perfect-run special rule:** a full 8/8 in **both** sections (16/16 total) **and** no prior
+score reported (`sat_history` = "Never taken one") -> top band `1400-1500` exactly. This is the
+**only** way to reach `1400-1500` via the estimate; any single wrong answer drops back onto the
+per-point curve (so 15/16 -> `1240-1330`). A reported prior score always defers to the §7.3
+override, so this rule never fires for official/practice history.
+
+> Note: raw 8 in a single section (band `680-720`) is only reachable in a non-perfect total
+> (e.g. 15/16 = 8 + 7); a 16/16 total is intercepted by the perfect-run rule above.
+
 ### 7.3 Overall band (prior score OVERRIDES our estimate — conservative)
-- Official + 1300+ -> `1300-1500`
-- Official + under 1100 -> `980-1120`
-- Official + 1100-1299 -> `1150-1320`
-- Practice + 1300+ -> `1250-1450`
-- Practice + under 1100 -> `950-1120`
-- Practice + 1100-1299 -> `1120-1300`
-- Never taken -> `est_low-est_high`
+- Official + 1300+ -> `1250-1400`
+- Official + under 1100 -> `900-1040`
+- Official + 1100-1299 -> `1040-1200`
+- Practice + 1300+ -> `1080-1240`
+- Practice + under 1100 -> `840-1000`
+- Practice + 1100-1299 -> `960-1120`
+- Never taken -> `est_low-est_high` (or `1400-1500` for a perfect run, §7.2)
 
 ### 7.4 Confidence
 Official -> `Moderate` · Practice -> `Low-Moderate` · Never -> `Low`.
@@ -264,6 +282,7 @@ The result page renders these blocks from the payload. Copy is templated per arc
 - **Top-3 fixes:** ranked list by archetype (map below).
 - **Timeline verdict:** "[timeline_verdict] — [one line tied to gap + test_date]."
 - **Recommendation:** name `recommended_program`, tie its 1-2 features to their bottleneck; mention Score Improvement Guarantee only for Accelerator, with baseline = Week-1 full mock.
+  - **Gap line (target-aware framing):** when the student named a target (`target_num > 0`) **and** the estimate falls short (`gap > 0`), append a line that names the target and the gap and positions Forge as the bridge — e.g. *"You're aiming for [target_num], and your estimate sits around [current_mid]. That's a [gap]-point gap — exactly the kind of distance a structured Forge plan is built to close."* If the target is "Not sure" (`gap` null) or the estimate already meets/exceeds the target (`gap <= 0`), omit the line. This is **copy only**: the target changes the framing/urgency, **never** the band/`current_mid`/`gap`/archetype/lead score/program — two identical answer sets with different targets always produce the same band. Never promise a guaranteed score.
 - **CTA:** WhatsApp button (pre-filled) + "Payment is quick via Whish."
 
 **Archetype -> meaning / real_bottleneck / top-3 fixes**
@@ -326,9 +345,9 @@ Auto-sending WhatsApp or email · consultation/call booking · payment processin
 ## 17. Acceptance Criteria
 
 **Scoring engine (golden tests — must match the reference spreadsheet exactly):**
-- **Rami** (target 1350-1449; Grade 12; Within 8 weeks; Official 1100-1299; Q-answers giving math_raw=5, rw_raw=6 with Q10 correct; timing "right on time"; hours 5-8; prep "On my own"; whatsapp+school present) -> band `1150-1320`, confidence Moderate, archetype **Plateaued Retaker**, gap 165, timeline **Aggressive**, program **$130 Accelerator**, lead_score 11, status **HOT**.
-- **Lina** (target 1250-1349; Grade 11; 4-6 months; Practice 1100-1299; math_raw=6, rw_raw=6; timing "Run out..."; hours 2-4; prep "school"; whatsapp only) -> band `1120-1300`, confidence Low-Moderate, archetype **Time-Pressured**, gap 90, timeline **Comfortable**, program **$130 Accelerator**, lead_score 6.5, status **WARM**.
-- **Karim** (target Not sure; Grade 10; No date; Never; math_raw=2, rw_raw=4; timing "never done timed"; hours <2; prep "Not really"; whatsapp only) -> band `880-1100`, confidence Low, archetype **Untested Unknown**, gap null, timeline **Early / lots of runway**, program **$80 Essentials**, lead_score 4, status **COLD**.
+- **Rami** (target 1350-1449; Grade 12; Within 8 weeks; Official 1100-1299; Q-answers giving math_raw=5, rw_raw=6 with Q10 correct; timing "right on time"; hours 5-8; prep "On my own"; whatsapp+school present) -> band `1040-1200`, confidence Moderate, archetype **Plateaued Retaker**, current_mid 1120, gap 280, timeline **Aggressive**, program **$130 Accelerator**, lead_score 11, status **HOT**.
+- **Lina** (target 1250-1349; Grade 11; 4-6 months; Practice 1100-1299; math_raw=6, rw_raw=6; timing "Run out..."; hours 2-4; prep "school"; whatsapp only) -> band `960-1120`, confidence Low-Moderate, archetype **Time-Pressured**, current_mid 1040, gap 260, timeline **Comfortable**, program **$130 Accelerator**, lead_score 7.5, status **WARM**. *(lead_score rose from 6.5 to 7.5: the lowered band widens the gap to 260, which crosses the ≥150 gap sub-score threshold; status stays WARM.)*
+- **Karim** (target Not sure; Grade 10; No date; Never; math_raw=2, rw_raw=4; timing "never done timed"; hours <2; prep "Not really"; whatsapp only) -> band `650-790`, confidence Low, archetype **Untested Unknown**, current_mid 720, gap null, timeline **Early / lots of runway**, program **$80 Essentials**, lead_score 4, status **COLD**.
 
 **End-to-end:**
 - Completing the flow persists exactly one `diagnostics` row with all answers + computed fields + `result_payload`.
