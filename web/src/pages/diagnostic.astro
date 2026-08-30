@@ -1,0 +1,64 @@
+---
+// F-M1 — the interactive diagnostic flow. This static Astro page loads the Forge
+// brand tokens + fonts, then mounts the React island (DiagnosticFlow) which runs the
+// 22-question flow entirely client-side. No backend call in F-M1 (wiring is F-M2).
+import DiagnosticFlow from '../components/DiagnosticFlow.tsx';
+
+const title = 'Forge SAT Diagnostic';
+const description = 'Answer ~22 quick questions and see where your SAT score really stands.';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<!-- The diagnostic is a private tool, not an SEO landing page. -->
+		<meta name="robots" content="noindex,nofollow" />
+		<meta name="theme-color" content="#F2EFE6" />
+		<link rel="icon" href="/forge-icon.svg" type="image/svg+xml" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600;700&display=swap"
+			rel="stylesheet"
+		/>
+		<style is:global>
+			:root {
+				--bone: #f2efe6;
+				--ink: #141310;
+				--molten: #d4331f;
+				--molten-dark: #a5290f;
+				--amber: #c9a227;
+				--grey: #8a857a;
+				--rule: #e3ddcf;
+				--ink-soft: #4a443b;
+				--card: #ffffff;
+			}
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+			html {
+				-webkit-text-size-adjust: 100%;
+			}
+			body {
+				background: var(--bone);
+				color: var(--ink);
+				font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+				font-size: 17px;
+				line-height: 1.55;
+				-webkit-font-smoothing: antialiased;
+				text-rendering: optimizeLegibility;
+			}
+		</style>
+	</head>
+
+	<body>
+		<!-- client:load → hydrate the React island as soon as the page loads. -->
+		<DiagnosticFlow client:load />
+	</body>
+</html>
