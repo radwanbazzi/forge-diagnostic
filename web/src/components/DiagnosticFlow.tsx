@@ -6,9 +6,11 @@
  * then a single Section 4 contact-capture screen (first name, WhatsApp, school[opt],
  * student/parent, consent).
  *
- * F-M1 scope: NO backend call and NO result screen. On submit we assemble the exact object
- * that POST /api/diagnostic/submit expects (see src/lib/validation.ts) and log it to the
- * browser console. Wiring + result rendering is F-M2.
+ * On submit we assemble the exact object POST /api/diagnostic/submit expects
+ * (see src/lib/validation.ts), send it, and render the server's result_payload via
+ * <ResultScreen> (F-M2). The client NEVER scores anything — the result is computed and
+ * persisted server-side and returned whole. A loading state covers the request and a
+ * friendly, retryable error state covers failures (the student never sees a raw error).
  *
  * The question text/options are imported verbatim from the pinned config — never reworded.
  */
@@ -19,7 +21,10 @@ import {
 	RESPONDENT_OPTIONS,
 	type Question,
 } from '../../../src/lib/questions';
+import ResultScreen from './ResultScreen';
+import { submitDiagnostic, type ResultPayload } from '../lib/api';
 import './diagnostic.css';
+import './result.css';
 
 // ── Section headings (PRD §3.1). Keyed by the `section` field on each question. ──
 const SECTION_TITLES: Record<number, string> = {
@@ -60,8 +65,12 @@ export default function DiagnosticFlow() {
 		respondent_type: '',
 		consent: false,
 	});
-	const [submitted, setSubmitted] = useState(false);
+	// idle → loading (request in flight) → result (payload rendered) | error (retryable).
+	const [status, setStatus] = useState<'idle' | 'loading' | 'result' | 'error'>('idle');
+	const [result, setResult] = useState<ResultPayload | null>(null);
 	const startedAt = useRef<number>(Date.now());
+	// One stable session id per attempt: shared by the submission and every analytics event.
+	const sessionId = useRef<string>(crypto.randomUUID());
 
 	const onContactScreen = step === CHOICE_QUESTIONS.length;
 	const currentQuestion = onContactScreen ? null : CHOICE_QUESTIONS[step];
@@ -91,12 +100,13 @@ export default function DiagnosticFlow() {
 		contact.respondent_type !== '' &&
 		contact.consent === true;
 
-	function handleSubmit() {
-		if (!contactValid) return;
+	async function handleSubmit() {
+		// Guard: invalid contact, or a request already in flight (double-tap safety).
+		if (!contactValid || status === 'loading') return;
 
 		// Assemble the EXACT shape POST /api/diagnostic/submit expects (validation.ts).
 		const submission = {
-			session_id: crypto.randomUUID(),
+			session_id: sessionId.current,
 			completion_time_sec: Math.max(0, Math.round((Date.now() - startedAt.current) / 1000)),
 			answers: {
 				target_score: answers.target_score,
@@ -127,23 +137,49 @@ export default function DiagnosticFlow() {
 			},
 		};
 
-		// F-M1: do NOT send to the backend. Just prove the data is collected correctly.
-		// eslint-disable-next-line no-console
-		console.log('[Forge diagnostic] F-M1 submission payload (not sent to backend yet):', submission);
-		setSubmitted(true);
+		// Send to the backend: it scores + persists the lead, then returns result_payload.
+		setStatus('loading');
+		try {
+			const { result_payload } = await submitDiagnostic(submission);
+			setResult(result_payload);
+			setStatus('result');
+		} catch {
+			// Never surface a raw error; offer a retry (same session_id → backend upserts,
+			// so a retry never creates a duplicate lead).
+			setStatus('error');
+		}
 	}
 
-	// ── Confirmation placeholder (the real result screen is F-M2) ──────────────────
-	if (submitted) {
+	// ── Result screen: render the server's payload verbatim (nothing recomputed here) ──
+	if (status === 'result' && result) {
+		return <ResultScreen payload={result} sessionId={sessionId.current} />;
+	}
+
+	// ── Loading: request in flight ─────────────────────────────────────────────────
+	if (status === 'loading') {
 		return (
 			<main className="fd-shell">
-				<div className="fd-done">
-					<p className="fd-eyebrow">Answers captured</p>
-					<h1 className="fd-done-title">You're all set{contact.first_name ? `, ${contact.first_name}` : ''}.</h1>
-					<p className="fd-done-body">
-						Your answers were collected successfully. Your personalized result screen is the next build step
-						(F-M2). For now, open your browser console to see the exact data that was captured.
+				<div className="fd-status" role="status" aria-live="polite">
+					<div className="fd-spinner" aria-hidden="true" />
+					<h1 className="fd-status-title">Scoring your answers…</h1>
+					<p className="fd-status-body">Building your personalized result. This takes just a moment.</p>
+				</div>
+			</main>
+		);
+	}
+
+	// ── Error: friendly, retryable (the student never sees a raw error or blank screen) ──
+	if (status === 'error') {
+		return (
+			<main className="fd-shell">
+				<div className="fd-status" role="alert">
+					<h1 className="fd-status-title">Something went wrong</h1>
+					<p className="fd-status-body">
+						We couldn't reach our servers to build your result. Your answers are still here — please try again.
 					</p>
+					<button type="button" className="fd-retry" onClick={handleSubmit}>
+						Try again →
+					</button>
 				</div>
 			</main>
 		);
