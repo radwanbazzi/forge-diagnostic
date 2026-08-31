@@ -17,12 +17,12 @@ const description =
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
 		<link rel="icon" href="/forge-icon.svg" type="image/svg+xml" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link
-			href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600;700&display=swap"
-			rel="stylesheet"
-		/>
+		<!-- Self-hosted fonts (F-M4a): no Google Fonts round-trip. Preload the latin
+		     subsets shown above the fold, then load the full @font-face sheet. -->
+		<link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href="/fonts/anton-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href="/fonts/ibm-plex-mono-500-latin.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="stylesheet" href="/fonts/forge-fonts.css" />
 		<style is:global>
 			:root {
 				--bone: #f2efe6;
@@ -32,6 +32,11 @@ const description =
 				--grey: #8a857a;
 				--rule: #e3ddcf;
 				--ink-soft: #4a443b;
+				/* AA-compliant variants for SMALL coloured text on light backgrounds
+				   (F-M4a). The vivid --molten/--grey stay for CTA fills, borders, and
+				   large display type, which already meet contrast requirements. */
+				--molten-text: #c22f16;
+				--grey-text: #6b665c;
 			}
 			* {
 				box-sizing: border-box;
@@ -80,7 +85,7 @@ const description =
 				font-size: 12.5px;
 				letter-spacing: 0.2em;
 				text-transform: uppercase;
-				color: var(--molten);
+				color: var(--molten-text);
 				margin-bottom: 16px;
 			}
 			h1 {
@@ -121,6 +126,12 @@ const description =
 			.cta:hover {
 				background: #c02d1a;
 			}
+			/* Keyboard focus ring (F-M4a) on the CTA and footer links. */
+			.cta:focus-visible,
+			footer a:focus-visible {
+				outline: 3px solid var(--ink);
+				outline-offset: 3px;
+			}
 			.cta:active {
 				transform: translateY(1px);
 				box-shadow: 0 1px 0 #a5290f;
@@ -132,7 +143,7 @@ const description =
 				font-family: 'IBM Plex Mono', monospace;
 				font-size: 12.5px;
 				letter-spacing: 0.02em;
-				color: var(--grey);
+				color: var(--grey-text);
 				margin-top: 18px;
 			}
 
@@ -165,7 +176,7 @@ const description =
 				font-family: 'IBM Plex Mono', monospace;
 				font-weight: 500;
 				font-size: 14px;
-				color: var(--molten);
+				color: var(--molten-text);
 				border: 1.5px solid var(--molten);
 				border-radius: 7px;
 				height: 32px;
@@ -201,10 +212,20 @@ const description =
 				border-top: 2px solid var(--rule);
 				margin-top: 48px;
 				padding: 24px 0 44px;
-				color: var(--grey);
+				color: var(--grey-text);
 				font-family: 'IBM Plex Mono', monospace;
 				font-size: 13px;
 				letter-spacing: 0.02em;
+			}
+			footer a {
+				color: var(--grey-text);
+				text-decoration: underline;
+			}
+			footer a:hover {
+				color: var(--molten);
+			}
+			.footer-sep {
+				margin: 0 8px;
 			}
 		</style>
 	</head>
@@ -260,6 +281,10 @@ const description =
 			</section>
 		</main>
 
-		<footer class="wrap">Forge · SAT preparation</footer>
+		<footer class="wrap">
+			<span>Forge · SAT preparation</span>
+			<span class="footer-sep" aria-hidden="true">·</span>
+			<a href="/privacy">Privacy</a>
+		</footer>
 	</body>
 </html>

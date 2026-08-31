@@ -1,0 +1,259 @@
+---
+// F-M4a — Privacy page (PRD §12). Plain-language explanation of what we collect and
+// why, that it is never sold or shared, the minor-awareness note, and how to request
+// deletion. Static, same brand tokens + self-hosted fonts as the rest of the site.
+const title = 'Privacy — Forge SAT Diagnostic';
+const description =
+	'What the Forge SAT Diagnostic collects, why, and how to ask us to delete your information. We use your details only to send your results and Forge updates — never sold, never shared.';
+const updated = 'August 2025';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<meta name="robots" content="index,follow" />
+		<meta name="theme-color" content="#F2EFE6" />
+		<meta property="og:type" content="website" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<link rel="icon" href="/forge-icon.svg" type="image/svg+xml" />
+		<!-- Self-hosted fonts (F-M4a): no Google Fonts round-trip. -->
+		<link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href="/fonts/anton-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="stylesheet" href="/fonts/forge-fonts.css" />
+		<style is:global>
+			:root {
+				--bone: #f2efe6;
+				--ink: #141310;
+				--molten: #d4331f;
+				--amber: #c9a227;
+				--grey: #8a857a;
+				--rule: #e3ddcf;
+				--ink-soft: #4a443b;
+				/* AA-compliant variants for small coloured text (F-M4a). */
+				--molten-text: #c22f16;
+				--grey-text: #6b665c;
+			}
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+			html {
+				-webkit-text-size-adjust: 100%;
+			}
+			body {
+				background: var(--bone);
+				color: var(--ink);
+				font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+				font-size: 17px;
+				line-height: 1.6;
+				-webkit-font-smoothing: antialiased;
+				text-rendering: optimizeLegibility;
+			}
+			.wrap {
+				max-width: 680px;
+				margin: 0 auto;
+				padding: 0 20px;
+			}
+			.mono {
+				font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+			}
+
+			/* Header / logo */
+			header {
+				padding: 30px 0 14px;
+				text-align: center;
+			}
+			.logo {
+				display: inline-block;
+				width: clamp(132px, 40vw, 184px);
+				height: auto;
+			}
+
+			/* Skip link — keyboard users jump straight to content */
+			.skip-link {
+				position: absolute;
+				left: -9999px;
+				top: 0;
+				background: var(--ink);
+				color: #fff;
+				padding: 10px 16px;
+				border-radius: 8px;
+				z-index: 10;
+			}
+			.skip-link:focus {
+				left: 12px;
+				top: 12px;
+			}
+
+			.pv-eyebrow {
+				font-family: 'IBM Plex Mono', monospace;
+				font-weight: 500;
+				font-size: 12.5px;
+				letter-spacing: 0.2em;
+				text-transform: uppercase;
+				color: var(--molten-text);
+				margin-bottom: 14px;
+			}
+			h1 {
+				font-family: Anton, Impact, 'Arial Narrow', sans-serif;
+				font-weight: 400;
+				text-transform: uppercase;
+				font-size: clamp(34px, 9vw, 52px);
+				line-height: 0.98;
+				letter-spacing: 0.005em;
+				margin-bottom: 12px;
+			}
+			.pv-updated {
+				font-family: 'IBM Plex Mono', monospace;
+				font-size: 12.5px;
+				letter-spacing: 0.02em;
+				color: var(--grey-text);
+				margin-bottom: 30px;
+			}
+			.pv-lede {
+				font-size: clamp(17px, 4.3vw, 19px);
+				color: var(--ink-soft);
+				margin-bottom: 34px;
+			}
+			h2 {
+				font-family: Anton, Impact, sans-serif;
+				font-weight: 400;
+				text-transform: uppercase;
+				font-size: clamp(21px, 5.6vw, 26px);
+				letter-spacing: 0.01em;
+				margin: 34px 0 14px;
+			}
+			p {
+				margin-bottom: 16px;
+				color: var(--ink);
+			}
+			ul {
+				margin: 0 0 16px 1.1em;
+			}
+			li {
+				margin-bottom: 8px;
+			}
+			a {
+				color: var(--molten-text);
+				font-weight: 600;
+			}
+			main a {
+				text-decoration: underline;
+			}
+			a:focus-visible {
+				outline: 3px solid var(--molten);
+				outline-offset: 2px;
+				border-radius: 4px;
+			}
+
+			/* Minor-awareness call-out */
+			.pv-note {
+				background: #f6efd8;
+				border: 1px solid var(--rule);
+				border-left: 4px solid var(--amber);
+				border-radius: 12px;
+				padding: 16px 18px;
+				margin: 22px 0;
+				font-size: 15.5px;
+				color: var(--ink-soft);
+			}
+			.pv-note strong {
+				color: var(--ink);
+			}
+
+			footer {
+				border-top: 2px solid var(--rule);
+				margin-top: 48px;
+				padding: 24px 0 44px;
+				color: var(--grey-text);
+				font-family: 'IBM Plex Mono', monospace;
+				font-size: 13px;
+				letter-spacing: 0.02em;
+			}
+			footer a {
+				color: var(--grey-text);
+			}
+			footer a:hover {
+				color: var(--molten);
+			}
+			.footer-sep {
+				margin: 0 8px;
+			}
+		</style>
+	</head>
+
+	<body>
+		<a class="skip-link" href="#main">Skip to content</a>
+
+		<header class="wrap">
+			<a href="/" aria-label="Forge — home">
+				<img class="logo" src="/forge-logo-primary.svg" alt="Forge" width="900" height="360" />
+			</a>
+		</header>
+
+		<main id="main" class="wrap">
+			<p class="pv-eyebrow">Privacy</p>
+			<h1>Your privacy</h1>
+			<p class="pv-updated">Last updated {updated}</p>
+
+			<p class="pv-lede">
+				This page explains, in plain language, what the Forge SAT Diagnostic collects, why, and how to ask us to delete your
+				information. The short version: we use your details only to send your results and helpful Forge updates — we never sell
+				or share them.
+			</p>
+
+			<h2>What we collect</h2>
+			<p>When you take the diagnostic, we collect:</p>
+			<ul>
+				<li>Your answers to the diagnostic questions (used to build your on-screen result).</li>
+				<li>Your first name and WhatsApp number, so we can send you your result and follow up.</li>
+				<li>Your school and whether you're a student or parent, if you choose to tell us (school is optional).</li>
+			</ul>
+			<p>
+				We collect only what we need for this. We never ask for — and never store — passwords, ID numbers, or any payment or
+				card details.
+			</p>
+
+			<h2>Why we collect it</h2>
+			<p>
+				We use your details for one purpose: to send you your diagnostic results and helpful Forge updates about SAT
+				preparation, usually over WhatsApp. That's it.
+			</p>
+
+			<h2>We never sell or share your information</h2>
+			<p>
+				Your information is never sold, rented, or shared with anyone outside Forge for their own use. It stays with us and is
+				used only for the reasons above.
+			</p>
+
+			<div class="pv-note">
+				<strong>If you're under 18:</strong> please make sure a parent or guardian knows you're using the diagnostic and is happy
+				for you to share your first name and WhatsApp number with us.
+			</div>
+
+			<h2>How to delete your information</h2>
+			<p>
+				You can ask us to delete your information at any time. Just send us a message on WhatsApp — the same WhatsApp contact you
+				use to receive your results — and ask us to delete your details. We'll remove them.
+			</p>
+
+			<h2>Questions</h2>
+			<p>
+				If anything here is unclear, message us on WhatsApp and we'll be glad to explain. You can start (or retake) the
+				diagnostic any time from the <a href="/">Forge home page</a>.
+			</p>
+		</main>
+
+		<footer class="wrap">
+			<span>Forge · SAT preparation</span>
+			<span class="footer-sep" aria-hidden="true">·</span>
+			<a href="/">Home</a>
+		</footer>
+	</body>
+</html>

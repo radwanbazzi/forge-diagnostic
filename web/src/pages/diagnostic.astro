@@ -19,12 +19,12 @@ const description = 'Answer ~22 quick questions and see where your SAT score rea
 		<meta name="robots" content="noindex,nofollow" />
 		<meta name="theme-color" content="#F2EFE6" />
 		<link rel="icon" href="/forge-icon.svg" type="image/svg+xml" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link
-			href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600;700&display=swap"
-			rel="stylesheet"
-		/>
+		<!-- Self-hosted fonts (F-M4a): no Google Fonts round-trip. Preload the latin
+		     subsets shown above the fold, then load the full @font-face sheet. -->
+		<link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href="/fonts/anton-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href="/fonts/ibm-plex-mono-500-latin.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="stylesheet" href="/fonts/forge-fonts.css" />
 		<style is:global>
 			:root {
 				--bone: #f2efe6;
@@ -36,6 +36,11 @@ const description = 'Answer ~22 quick questions and see where your SAT score rea
 				--rule: #e3ddcf;
 				--ink-soft: #4a443b;
 				--card: #ffffff;
+				/* AA-compliant variants for SMALL coloured text on light backgrounds
+				   (F-M4a). Vivid --molten/--grey stay for fills, borders, and large
+				   display type. */
+				--molten-text: #c22f16;
+				--grey-text: #6b665c;
 			}
 			* {
 				box-sizing: border-box;

@@ -14,7 +14,7 @@
  *
  * The question text/options are imported verbatim from the pinned config — never reworded.
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
 	QUESTIONS,
 	CONSENT_TEXT,
@@ -235,13 +235,24 @@ function QuestionScreen({
 	onSelect: (value: string) => void;
 	onBack: () => void;
 }) {
+	// On each new question screen, move focus to the heading so keyboard and
+	// screen-reader users are carried to the new question (auto-advance would
+	// otherwise drop focus back to the top of the page). :focus-visible does not
+	// fire for programmatic focus, so no ring flashes for mouse users.
+	const headingRef = useRef<HTMLHeadingElement>(null);
+	useEffect(() => {
+		headingRef.current?.focus();
+	}, [question.n]);
+
 	return (
 		<div className="fd-card" key={question.n}>
 			<button type="button" className="fd-back" onClick={onBack}>
 				← Back
 			</button>
 
-			<h1 className="fd-question">{question.prompt}</h1>
+			<h1 className="fd-question" tabIndex={-1} ref={headingRef}>
+				{question.prompt}
+			</h1>
 
 			<div className="fd-options">
 				{(question.options ?? []).map((opt) => {
@@ -283,13 +294,22 @@ function ContactScreen({
 	const set = <K extends keyof Contact>(key: K, value: Contact[K]) =>
 		setContact((prev) => ({ ...prev, [key]: value }));
 
+	// Carry focus to the heading when the contact screen appears (same reasoning
+	// as the question screens above).
+	const headingRef = useRef<HTMLHeadingElement>(null);
+	useEffect(() => {
+		headingRef.current?.focus();
+	}, []);
+
 	return (
 		<div className="fd-card">
 			<button type="button" className="fd-back" onClick={onBack}>
 				← Back
 			</button>
 
-			<h1 className="fd-question">Where should we send your results?</h1>
+			<h1 className="fd-question" tabIndex={-1} ref={headingRef}>
+				Where should we send your results?
+			</h1>
 			<p className="fd-help">Your result appears on the next screen. We use these details only to send your results and Forge updates.</p>
 
 			<form
@@ -364,6 +384,15 @@ function ContactScreen({
 					/>
 					<span className="fd-consent-text">{CONSENT_TEXT}</span>
 				</label>
+
+				<p className="fd-privacy">
+					We use these details only to send your results and Forge updates — never sold, never shared.{' '}
+					{/* Opens in a new tab so your answers aren't lost. */}
+					<a href="/privacy" target="_blank" rel="noopener noreferrer">
+						Read our privacy note
+					</a>
+					.
+				</p>
 
 				<button type="submit" className="fd-submit" disabled={!valid}>
 					See my results →

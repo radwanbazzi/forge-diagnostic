@@ -5,6 +5,23 @@
 	font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* Keyboard focus (F-M4a): a clear, consistent focus ring on every interactive
+   control so keyboard/switch users can always see where they are. Uses
+   :focus-visible so it shows for keyboard focus but not on mouse click. */
+.fd-shell :focus-visible {
+	outline: 3px solid var(--molten);
+	outline-offset: 2px;
+	border-radius: 8px;
+}
+/* The option / segment / input controls already carry rounded corners; keep the
+   ring hugging their shape. */
+.fd-option:focus-visible,
+.fd-segment-btn:focus-visible,
+.fd-input:focus-visible,
+.fd-submit:focus-visible {
+	outline-offset: 2px;
+}
+
 .fd-shell {
 	max-width: 560px;
 	margin: 0 auto;
@@ -41,19 +58,25 @@
 	font-size: 12px;
 	letter-spacing: 0.18em;
 	text-transform: uppercase;
-	color: var(--molten);
+	color: var(--molten-text);
 	font-weight: 500;
 }
 .fd-count {
 	font-size: 12px;
 	letter-spacing: 0.04em;
-	color: var(--grey);
+	color: var(--grey-text);
 }
 
 /* ── Card ── */
 .fd-card {
 	padding: 8px 0 0;
 	animation: fd-in 0.24s ease both;
+}
+/* Respect reduced-motion: no entrance slide for users who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+	.fd-card {
+		animation: none;
+	}
 }
 @keyframes fd-in {
 	from {
@@ -80,7 +103,7 @@
 	min-height: 40px;
 }
 .fd-back:hover {
-	color: var(--molten);
+	color: var(--molten-text);
 }
 
 .fd-question {
@@ -166,7 +189,7 @@
 }
 .fd-optional {
 	font-weight: 400;
-	color: var(--grey);
+	color: var(--grey-text);
 }
 .fd-input {
 	width: 100%;
@@ -240,6 +263,20 @@
 	line-height: 1.5;
 }
 
+/* Privacy line under consent (F-M4a). Links to /privacy in a new tab so the
+   student's in-progress answers (held in React state) are never lost. */
+.fd-privacy {
+	font-size: 14px;
+	color: var(--ink-soft);
+	line-height: 1.5;
+	margin-top: -6px;
+}
+.fd-privacy a {
+	color: var(--molten-text);
+	font-weight: 600;
+	text-decoration: underline;
+}
+
 /* Submit */
 .fd-submit {
 	appearance: none;
@@ -282,7 +319,7 @@
 	font-size: 12px;
 	letter-spacing: 0.2em;
 	text-transform: uppercase;
-	color: var(--molten);
+	color: var(--molten-text);
 	margin-bottom: 14px;
 }
 .fd-done-title {

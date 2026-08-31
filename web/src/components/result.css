@@ -25,7 +25,7 @@
 	font-size: 12px;
 	letter-spacing: 0.2em;
 	text-transform: uppercase;
-	color: var(--molten);
+	color: var(--molten-text);
 	padding: 22px 0 14px;
 }
 
@@ -94,7 +94,7 @@
 	height: 18px;
 	margin-top: 8px;
 	font-size: 11px;
-	color: var(--grey);
+	color: var(--grey-text);
 }
 .fr-gauge-label {
 	position: absolute;
@@ -118,7 +118,7 @@
 	font-size: 12px;
 	letter-spacing: 0.16em;
 	text-transform: uppercase;
-	color: var(--grey);
+	color: var(--grey-text);
 	margin-bottom: 10px;
 }
 .fr-body {
@@ -127,7 +127,7 @@
 	color: var(--ink);
 }
 .fr-verdict {
-	color: var(--molten);
+	color: var(--molten-text);
 	font-weight: 700;
 }
 
@@ -260,9 +260,9 @@
 	color: var(--ink-soft);
 }
 .fr-whish-link {
-	color: var(--molten);
+	color: var(--molten-text);
 	font-weight: 600;
-	text-decoration: none;
+	text-decoration: underline;
 	white-space: nowrap;
 }
 .fr-whish-link:hover {
@@ -320,6 +320,15 @@
 	transform: translateY(1px);
 	box-shadow: 0 1px 0 var(--molten-dark);
 }
+/* Keyboard focus (F-M4a): clear focus ring on the result-screen controls
+   (WhatsApp CTA, Whish link) and the error-state retry button. */
+.fr-shell :focus-visible,
+.fd-status :focus-visible {
+	outline: 3px solid var(--molten);
+	outline-offset: 2px;
+	border-radius: 8px;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.fr-shell,
 	.fd-spinner {
