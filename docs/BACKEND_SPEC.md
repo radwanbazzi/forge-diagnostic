@@ -172,7 +172,10 @@ export default app;
 | session_id | text | client-generated, for dedupe (US-1.6) |
 | created_at | integer | unix ms, default now |
 | source | text null | UTM/source |
-| completion_time_sec | integer null | |
+| completion_time_sec | integer null | whole-flow time (all 22 Qs) |
+| skills_time_total_sec | integer null | F-M-Timer: total time on Q5–Q12 |
+| skills_timed_out_count | integer null | F-M-Timer: how many of the 8 hit the countdown limit |
+| skills_timings | text null | F-M-Timer: JSON `{ q5:{sec,timed_out}, … q12 }` |
 | **answers (raw option strings)** | | |
 | target_score, grade, test_date, sat_history | text | Q1–Q4 |
 | q5,q6,q7,q8,q9,q10,q11,q12 | text | scored questions |
@@ -223,7 +226,7 @@ All JSON. Base path `/api`. Admin routes require a valid Cloudflare Access ident
 
 ### `POST /api/diagnostic/submit`  — **Create**
 - Auth: none (public).
-- Body: `{ session_id, source?, completion_time_sec?, answers: {…22 fields}, contact: { first_name, whatsapp, school?, respondent_type, consent } }`
+- Body: `{ session_id, source?, completion_time_sec?, skills_timings?: { q5:{sec,timed_out}, … q12 }, answers: {…22 fields}, contact: { first_name, whatsapp, school?, respondent_type, consent } }` (`skills_timings` is F-M-Timer measured timing; optional so a legacy client still validates)
 - Validate (zod) → score (`lib/scoring`) → build payload (`lib/resultCopy`) → insert row → return.
 - 200 `{ id, result_payload }` (result_payload = everything the result page renders).
 - Failures: F1.1–F1.8 above (400 validation, 409 duplicate, 500 write/scoring).

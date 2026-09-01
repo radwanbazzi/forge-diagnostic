@@ -43,6 +43,12 @@ describe('POST /api/diagnostic/submit — happy path', () => {
 			expect(row.gap).toBe(g.expected.gap);
 			expect(row.consent).toBe(1);
 			expect(row.respondent_type).toBe('student');
+			// F-M-Timer: the measured timing was persisted (aggregates + per-question JSON).
+			const timeouts = Object.values(g.timing).filter((t) => t.timed_out).length;
+			const totalSec = Object.values(g.timing).reduce((s, t) => s + t.sec, 0);
+			expect(row.skills_timed_out_count).toBe(timeouts);
+			expect(row.skills_time_total_sec).toBe(totalSec);
+			expect(JSON.parse(row.skills_timings as string).q12.timed_out).toBe(g.timing.q12.timed_out);
 			// result_payload persisted equals what we returned
 			expect(JSON.parse(row.result_payload).band.range).toBe(g.expected.overall_band);
 		});

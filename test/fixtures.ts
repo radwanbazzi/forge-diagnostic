@@ -1,4 +1,5 @@
-import type { Answers, Computed } from '../src/types';
+import { SKILLS_QUESTIONS, type SkillsQuestionKey } from '../src/lib/questions';
+import type { Answers, Computed, SkillsTimings } from '../src/types';
 
 /**
  * The three golden cases (PRD §17), expressed with the EXACT locked option strings
@@ -14,8 +15,24 @@ export interface GoldenContact {
 
 export interface Golden {
 	answers: Answers;
+	/** MEASURED skills timing (F-M-Timer) — drives the "Time-Pressured" archetype (§7.5). */
+	timing: SkillsTimings;
 	contact: GoldenContact;
 	expected: Computed;
+}
+
+/**
+ * Build a full 8-question timing set. Unlisted questions default to a brisk, in-limit answer
+ * (20s, not timed out); pass `[sec, timed_out]` per question to override. Keeps the golden
+ * fixtures readable while still exercising the real measured-timing path.
+ */
+export function timings(spec: Partial<Record<SkillsQuestionKey, [number, boolean]>> = {}): SkillsTimings {
+	const out = {} as SkillsTimings;
+	for (const q of SKILLS_QUESTIONS) {
+		const [sec, timed_out] = spec[q] ?? [20, false];
+		out[q] = { sec, timed_out };
+	}
+	return out;
 }
 
 export const RAMI: Golden = {
@@ -29,7 +46,7 @@ export const RAMI: Golden = {
 		q7: 'B) 4', // ✓ math 2
 		q8: 'A) nostalgia', // ✗
 		q9: 'B) 96%', // ✓ math 2
-		q10: 'B) library; only', // ✓ rw 2
+		q10: 'B) ;', // ✓ rw 2
 		q11: 'C) 15', // ✗ (correct A)
 		q12: 'B) Food may have been prepared or eaten outside the walled area.', // ✓ rw 3
 		hours_per_week: '5–8',
@@ -38,6 +55,8 @@ export const RAMI: Golden = {
 		prep_status: 'On my own',
 		worried_about: 'Math',
 	},
+	// Finished every skills question inside its limit — 0 timeouts → NOT Time-Pressured (§7.5).
+	timing: timings(),
 	contact: { first_name: 'Rami', whatsapp: '+961 3 111 111', school: 'International College', respondent_type: 'Student' },
 	expected: {
 		math_raw: 5,
@@ -66,7 +85,7 @@ export const LINA: Golden = {
 		q7: 'B) 4', // ✓ math 2
 		q8: 'A) nostalgia', // ✗
 		q9: 'A) 100%', // ✗ (correct B)
-		q10: 'B) library; only', // ✓ rw 2
+		q10: 'B) ;', // ✓ rw 2
 		q11: 'A) 12', // ✓ math 3
 		q12: 'B) Food may have been prepared or eaten outside the walled area.', // ✓ rw 3
 		hours_per_week: '2–4',
@@ -75,6 +94,10 @@ export const LINA: Golden = {
 		prep_status: 'Through my school',
 		worried_about: 'Reading',
 	},
+	// Genuinely ran out of time on the 3 hardest/later questions (q10, q11, q12) → measured
+	// timed-out count 3 ≥ threshold → Time-Pressured on the DATA (§7.5 primary path), which also
+	// matches her self-report. This is what keeps her archetype stable under the new rule.
+	timing: timings({ q10: [60, true], q11: [50, true], q12: [70, true] }),
 	contact: { first_name: 'Lina', whatsapp: '+961 3 222 222', respondent_type: 'Student' },
 	expected: {
 		math_raw: 6,
@@ -103,7 +126,7 @@ export const KARIM: Golden = {
 		q7: 'A) 3', // ✗
 		q8: 'B) self-reproach', // ✓ rw 2
 		q9: 'B) 96%', // ✓ math 2
-		q10: 'B) library; only', // ✓ rw 2
+		q10: 'B) ;', // ✓ rw 2
 		q11: 'B) 9', // ✗ (correct A)
 		q12: 'A) The inhabitants did not eat the grain they grew.', // ✗ (correct B) → Q12 wrong, so NOT Shaky Grammarian
 		hours_per_week: 'Less than 2',
@@ -112,6 +135,8 @@ export const KARIM: Golden = {
 		prep_status: 'Not really preparing yet',
 		worried_about: 'Honestly, all of it',
 	},
+	// No timeouts → NOT Time-Pressured; falls through to Untested Unknown (§7.5).
+	timing: timings(),
 	contact: { first_name: 'Karim', whatsapp: '+961 3 333 333', respondent_type: 'Student' },
 	expected: {
 		math_raw: 2,
@@ -139,6 +164,7 @@ export const GOLDENS: Record<string, Golden> = { Rami: RAMI, Lina: LINA, Karim: 
 export function submissionBody(g: Golden, session_id: string) {
 	return {
 		session_id,
+		skills_timings: { ...g.timing },
 		answers: { ...g.answers },
 		contact: {
 			first_name: g.contact.first_name,

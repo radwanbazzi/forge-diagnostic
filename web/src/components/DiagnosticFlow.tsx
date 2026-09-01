@@ -19,12 +19,22 @@ import {
 	QUESTIONS,
 	CONSENT_TEXT,
 	RESPONDENT_OPTIONS,
+	SKILLS_QUESTIONS,
 	type Question,
 } from '../../../src/lib/questions';
 import ResultScreen from './ResultScreen';
 import { submitDiagnostic, type ResultPayload } from '../lib/api';
 import './diagnostic.css';
 import './result.css';
+
+/** The 8 scored skills questions (Section 2) are the ONLY timed screens (F-M-Timer). */
+const SKILLS_FIELDS = new Set<string>(SKILLS_QUESTIONS);
+
+/** MEASURED timing for one skills question: seconds spent + whether the countdown ran out. */
+interface QuestionTiming {
+	sec: number;
+	timed_out: boolean;
+}
 
 // ── Section headings (PRD §3.1). Keyed by the `section` field on each question. ──
 const SECTION_TITLES: Record<number, string> = {
@@ -75,8 +85,64 @@ export default function DiagnosticFlow() {
 	// screen change (see selectOption).
 	const advancing = useRef(false);
 
+	// ── F-M-Timer: MEASURED per-question timing for the 8 skills questions ──
+	// timingsRef holds the FIRST-pass result for each skills field (recorded once, never
+	// overwritten on a revisit) so the number we send is the genuinely-timed one.
+	const timingsRef = useRef<Record<string, QuestionTiming>>({});
+	// When the current timed question became active (drives the elapsed measurement).
+	const questionStartRef = useRef<number>(0);
+	// Seconds left on the current countdown, or null when the screen is not timed.
+	const [remaining, setRemaining] = useState<number | null>(null);
+
 	const onContactScreen = step === CHOICE_QUESTIONS.length;
 	const currentQuestion = onContactScreen ? null : CHOICE_QUESTIONS[step];
+
+	// Record the measured time for a skills question — once only (first pass wins), so a
+	// bounce-back to answer a timed-out blank never rewrites the real, timed measurement.
+	function recordTiming(field: string, timedOut: boolean) {
+		if (timingsRef.current[field]) return;
+		const sec = Math.max(0, Math.round((Date.now() - questionStartRef.current) / 1000));
+		timingsRef.current[field] = { sec, timed_out: timedOut };
+	}
+
+	// Countdown lifecycle: when we land on a NOT-yet-timed skills question, start its clock and
+	// tick it down; at zero, record a timeout and auto-advance. Untimed screens (context/contact,
+	// or a revisited skills question) clear the clock. Re-runs whenever the step changes.
+	useEffect(() => {
+		const q = onContactScreen ? null : CHOICE_QUESTIONS[step];
+		const limit = q?.time_limit_sec;
+		// No countdown for: contact screen, non-skills questions, or an already-measured question.
+		if (!q || !limit || timingsRef.current[q.field]) {
+			setRemaining(null);
+			return;
+		}
+
+		questionStartRef.current = Date.now();
+		const deadline = questionStartRef.current + limit * 1000;
+		setRemaining(limit);
+
+		const id = window.setInterval(() => {
+			const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+			setRemaining(left);
+			if (left <= 0) {
+				window.clearInterval(id);
+				handleTimeout(q.field, step);
+			}
+		}, 250);
+
+		return () => window.clearInterval(id);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [step]);
+
+	// Countdown hit zero with no answer chosen: record the timeout and move on (blank stays blank;
+	// the pre-submit completeness guard carries the student back to finish it, untimed).
+	function handleTimeout(field: string, from: number) {
+		if (advancing.current) return; // a tap is already advancing this screen
+		advancing.current = true;
+		recordTiming(field, true);
+		setStep((s) => (s === from ? Math.min(s + 1, CHOICE_QUESTIONS.length) : s));
+		advancing.current = false;
+	}
 
 	// Progress: how many of the TOTAL_STEPS screens are complete-and-behind us.
 	const progressPct = Math.round((step / TOTAL_STEPS) * 100);
@@ -96,6 +162,8 @@ export default function DiagnosticFlow() {
 		// skipped (flashed with no answer recorded) → a missing answer → the submit 400'd.
 		if (advancing.current) return;
 		advancing.current = true;
+		// F-M-Timer: for a skills question, capture how long they took (answered within the limit).
+		if (SKILLS_FIELDS.has(field)) recordTiming(field, false);
 		setAnswers((prev) => ({ ...prev, [field]: value }));
 		// Smooth auto-advance to the next screen after a brief visual confirm. Advance ONLY
 		// from the screen this tap was made on (`from`), so at most one step is ever crossed.
@@ -126,10 +194,18 @@ export default function DiagnosticFlow() {
 			return;
 		}
 
+		// F-M-Timer: the measured timing for all 8 skills questions. Every skills screen was
+		// visited before this point, so each field is present; fall back defensively so a
+		// missing one can never 400 the submission.
+		const skills_timings = Object.fromEntries(
+			SKILLS_QUESTIONS.map((q) => [q, timingsRef.current[q] ?? { sec: 0, timed_out: false }]),
+		);
+
 		// Assemble the EXACT shape POST /api/diagnostic/submit expects (validation.ts).
 		const submission = {
 			session_id: sessionId.current,
 			completion_time_sec: Math.max(0, Math.round((Date.now() - startedAt.current) / 1000)),
+			skills_timings,
 			answers: {
 				target_score: answers.target_score,
 				grade: answers.grade,
@@ -239,6 +315,7 @@ export default function DiagnosticFlow() {
 					selected={answers[currentQuestion!.field]}
 					onSelect={(value) => selectOption(currentQuestion!.field, value)}
 					onBack={goBack}
+					remaining={remaining}
 				/>
 			)}
 		</main>
@@ -251,11 +328,14 @@ function QuestionScreen({
 	selected,
 	onSelect,
 	onBack,
+	remaining,
 }: {
 	question: Question;
 	selected: string | undefined;
 	onSelect: (value: string) => void;
 	onBack: () => void;
+	/** Seconds left on this question's countdown, or null when the screen is not timed. */
+	remaining: number | null;
 }) {
 	// On each new question screen, move focus to the heading so keyboard and
 	// screen-reader users are carried to the new question (auto-advance would
@@ -266,11 +346,28 @@ function QuestionScreen({
 		headingRef.current?.focus();
 	}, [question.n]);
 
+	const limit = question.time_limit_sec;
+	const timed = remaining !== null && !!limit;
+	const pct = timed ? Math.max(0, Math.min(100, (remaining! / limit!) * 100)) : 0;
+	const low = timed && remaining! <= 10; // gentle emphasis in the last stretch — no red alarm
+
 	return (
 		<div className="fd-card" key={question.n}>
 			<button type="button" className="fd-back" onClick={onBack}>
 				← Back
 			</button>
+
+			{timed ? (
+				<div className={`fd-timer${low ? ' is-low' : ''}`} role="timer" aria-label={`Time left: ${remaining} seconds`}>
+					<div className="fd-timer-row">
+						<span className="fd-timer-label mono">Time on this question</span>
+						<span className="fd-timer-count mono">{remaining}s</span>
+					</div>
+					<div className="fd-timer-track" aria-hidden="true">
+						<div className="fd-timer-fill" style={{ width: `${pct}%` }} />
+					</div>
+				</div>
+			) : null}
 
 			<h1 className="fd-question" tabIndex={-1} ref={headingRef}>
 				{question.prompt}

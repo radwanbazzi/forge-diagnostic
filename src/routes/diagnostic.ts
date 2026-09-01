@@ -53,15 +53,28 @@ diagnostic.post('/submit', async (c) => {
 		const issues = parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message }));
 		return c.json({ error: 'validation_error', issues }, 400);
 	}
-	const { session_id, source, completion_time_sec, answers, contact } = parsed.data;
+	const { session_id, source, completion_time_sec, skills_timings, answers, contact } = parsed.data;
 
 	// F1.2 — consent must be exactly true.
 	if (contact.consent !== true) {
 		return c.json({ error: 'consent_required', message: 'consent required' }, 400);
 	}
 
-	// Score (pure, B2). Contact presence feeds the lead score (§7.9).
-	const computed = score({ answers, contact: { whatsapp: contact.whatsapp, school: contact.school ?? null } });
+	// F-M-Timer: derive the stored aggregates from the per-question timing (when the client sent it).
+	// These feed the MEASURED "Time-Pressured" archetype (§7.5) and are snapshotted on the row.
+	const skillsTimeTotalSec = skills_timings
+		? Object.values(skills_timings).reduce((sum, t) => sum + t.sec, 0)
+		: null;
+	const skillsTimedOutCount = skills_timings
+		? Object.values(skills_timings).filter((t) => t.timed_out).length
+		: null;
+
+	// Score (pure, B2). Contact presence feeds the lead score (§7.9); timing feeds the archetype (§7.5).
+	const computed = score({
+		answers,
+		contact: { whatsapp: contact.whatsapp, school: contact.school ?? null },
+		timing: skills_timings,
+	});
 
 	// F1.8 — fail closed if scoring produced an impossible state.
 	if (!isValidComputed(computed)) {
@@ -80,6 +93,9 @@ diagnostic.post('/submit', async (c) => {
 		session_id,
 		source: source ?? null,
 		completion_time_sec: completion_time_sec ?? null,
+		skills_time_total_sec: skillsTimeTotalSec,
+		skills_timed_out_count: skillsTimedOutCount,
+		skills_timings: skills_timings ? JSON.stringify(skills_timings) : null,
 		...answers,
 		first_name: contact.first_name,
 		whatsapp: contact.whatsapp,

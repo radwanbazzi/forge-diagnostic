@@ -12,7 +12,14 @@
 import { ANSWER_KEY, MAX_SECTION_RAW, type ScoredQuestion } from './answerKey';
 import { computeLeadScore, leadStatus, recommendProgram } from './leadScore';
 import { normalizeOption } from './normalize';
-import type { Answers, Computed, ScoreInput } from '../types';
+import type { Answers, Computed, ScoreInput, SkillsTimings } from '../types';
+
+/**
+ * How many of the 8 skills questions must a student MEASURABLY run out of time on before we
+ * call them "Time-Pressured" on the strength of the data alone (§7.5, primary path). Three of
+ * eight is a clear, repeated pattern — not one unlucky slow question.
+ */
+const TIMED_OUT_MEASURED_THRESHOLD = 3;
 
 type Archetype = Computed['archetype'];
 type Confidence = Computed['confidence'];
@@ -131,10 +138,33 @@ function confidenceOf(history: History): Confidence {
 	return 'Low'; // never / unknown
 }
 
+/** Number of the 8 skills questions where the student hit the countdown limit (F-M-Timer). */
+function timedOutCount(timing: SkillsTimings | undefined): number {
+	if (!timing) return 0;
+	return SCORED_QUESTIONS.reduce((n, q) => n + (timing[q]?.timed_out ? 1 : 0), 0);
+}
+
+/**
+ * §7.5 "Time-Pressured" — MEASURED, not self-reported (F-M-Timer). A student is Time-Pressured
+ * only when the timer data shows they genuinely ran out of time:
+ *   • PRIMARY  — hit the limit on ≥3 of the 8 skills questions (the data speaks for itself), OR
+ *   • CORROBORATED — hit the limit on ≥1 question AND self-reported "Run out" (Q14).
+ * Self-report ALONE never triggers it, and — crucially — a fast-and-careless run (answers
+ * everything quickly, times out on nothing) can NEVER be Time-Pressured: with 0 timeouts both
+ * paths are false. When no timing was captured at all, this returns false (self-report is not
+ * enough on its own).
+ */
+function isTimePressured(a: Answers, timing: SkillsTimings | undefined): boolean {
+	const outs = timedOutCount(timing);
+	if (outs >= TIMED_OUT_MEASURED_THRESHOLD) return true;
+	const selfReportsRunOut = normalizeOption(a.timing).includes('run out');
+	return outs >= 1 && selfReportsRunOut;
+}
+
 /** §7.5 archetype — top-down, FIRST match wins (ref AF2). */
-function archetypeOf(a: Answers, raw: RawResult, history: History): Archetype {
-	// 1. Time pressure beats everything.
-	if (normalizeOption(a.timing).includes('run out')) return 'Time-Pressured';
+function archetypeOf(a: Answers, raw: RawResult, history: History, timing: SkillsTimings | undefined): Archetype {
+	// 1. Time pressure beats everything — but only when MEASURED (see isTimePressured).
+	if (isTimePressured(a, timing)) return 'Time-Pressured';
 	// 2. A ≥3-point section imbalance.
 	if (Math.abs(raw.math_raw - raw.rw_raw) >= 3) {
 		return raw.math_raw < raw.rw_raw ? 'Lopsided (Math-weak)' : 'Lopsided (R&W-weak)';
@@ -189,7 +219,7 @@ export function isValidComputed(c: Computed): boolean {
 
 /** The one public entry point: answers → all computed fields (PRD §7). Pure. */
 export function score(input: ScoreInput): Computed {
-	const { answers, contact } = input;
+	const { answers, contact, timing } = input;
 
 	const raw = scoreRaw(answers);
 	const [mathLow, mathHigh] = sectionBand(raw.math_raw);
@@ -207,7 +237,7 @@ export function score(input: ScoreInput): Computed {
 		raw.math_raw === MAX_SECTION_RAW && raw.rw_raw === MAX_SECTION_RAW && history.type === 'never';
 	const overall_band = perfectRun ? '1400-1500' : overallBand(history, estLow, estHigh);
 	const confidence = confidenceOf(history);
-	const archetype = archetypeOf(answers, raw, history);
+	const archetype = archetypeOf(answers, raw, history, timing);
 
 	const target_num = targetNumberOf(answers.target_score);
 	const current_mid = bandMidpoint(overall_band);

@@ -18,7 +18,13 @@ export const diagnostics = sqliteTable('diagnostics', {
 		.notNull()
 		.$defaultFn(() => Date.now()), // unix ms
 	source: text('source'), // UTM/source (nullable)
-	completion_time_sec: integer('completion_time_sec'), // nullable
+	completion_time_sec: integer('completion_time_sec'), // nullable — whole-flow time (all 22 Qs)
+
+	// F-M-Timer: MEASURED timing for the 8 scored skills questions (Section 2). All nullable so
+	// pre-F-M-Timer rows (and any client that omits timing) stay valid.
+	skills_time_total_sec: integer('skills_time_total_sec'), // total seconds across Q5–Q12
+	skills_timed_out_count: integer('skills_timed_out_count'), // how many of the 8 hit the limit
+	skills_timings: text('skills_timings'), // JSON: { q5: { sec, timed_out }, … q12 } — per-question detail
 
 	// answers — Q1–Q4 (raw option strings)
 	target_score: text('target_score').notNull(),

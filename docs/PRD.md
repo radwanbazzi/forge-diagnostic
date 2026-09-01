@@ -66,7 +66,7 @@ No auto-sending of WhatsApp/email. No consultation booking. No payment processin
 ```
 Landing (value prop, "Start" CTA)  — static, SEO-friendly (Astro)
   → Section 1: goal + context (4 Q)
-  → Section 2: skills check (8 Q, easy→hard)
+  → Section 2: skills check (8 Q, easy→hard) — each question is TIMED (per-question countdown, F-M-Timer §7.11)
   → Section 3: study habits (5 Q)
   → Contact capture (name, WhatsApp, school[opt], student/parent, consent)  ← REQUIRED before result
   → [POST /api/diagnostic/submit — server scores + persists lead]
@@ -136,7 +136,10 @@ Login (Cloudflare Access — gates /admin to founder's email; no app-level passw
 | session_id | text | client-generated per attempt (dedupe) |
 | created_at | integer | unix ms, default now |
 | source | text null | UTM/source |
-| completion_time_sec | integer null | |
+| completion_time_sec | integer null | whole-flow time (all 22 Qs) |
+| skills_time_total_sec | integer null | F-M-Timer: total time on Q5–Q12 |
+| skills_timed_out_count | integer null | F-M-Timer: how many of the 8 hit the limit |
+| skills_timings | text null (JSON) | F-M-Timer: per-question `{sec,timed_out}` |
 | **Answers** | | |
 | target_score | text | Q1 raw option |
 | grade | text | Q2 |
@@ -241,11 +244,23 @@ Official -> `Moderate` · Practice -> `Low-Moderate` · Never -> `Low`.
 *(No "High" is produced by v1 — reserved for future full-mock integration.)*
 
 ### 7.5 Archetype (top-down, FIRST match wins)
-1. timing (Q14) contains "Run out" -> **Time-Pressured**
+1. **Time-Pressured — MEASURED (F-M-Timer), not self-reported.** From the per-question skills
+   timing (§7.11), let `timed_out_count` = how many of the 8 skills questions the student hit the
+   countdown limit on. A student is **Time-Pressured** when **either**:
+   - `timed_out_count >= 3` (ran out of time on ≥3 of 8 — the data speaks for itself), **or**
+   - `timed_out_count >= 1` **AND** timing (Q14) contains "Run out" (self-report corroborated by ≥1 real timeout).
+
+   Self-report **alone never triggers** it, and a **fast-and-careless** run (answers everything
+   quickly, times out on nothing → `timed_out_count = 0`) can **never** be Time-Pressured. When no
+   timing was captured at all (legacy client), this rule cannot fire and we fall through.
 2. `abs(math_raw - rw_raw) >= 3` -> **Lopsided (Math-weak)** if math<rw else **Lopsided (R&W-weak)**
 3. Q12 correct (B) AND Q10 wrong (!=B) -> **Shaky Grammarian**
 4. sat_history != "Never taken one" -> **Plateaued Retaker**
 5. else -> **Untested Unknown**
+
+> **Why this changed:** the old rule labeled anyone who *said* "I run out of time" as Time-Pressured,
+> so a student who rushed and clicked randomly was wrongly labeled. We now MEASURE it: the label
+> comes from actually hitting the countdown limits. Q14 is kept as corroboration, never as the sole trigger.
 
 ### 7.6 Target number
 `Under 1100 -> 1050 · 1100-1249 -> 1175 · 1250-1349 -> 1300 · 1350-1449 -> 1400 · 1450+ -> 1500 · Not sure -> 0`
@@ -268,6 +283,25 @@ Official -> `Moderate` · Practice -> `Low-Moderate` · Never -> `Low`.
 
 ### 7.10 Program recommendation
 `lead_status == COLD` OR `archetype == Untested Unknown` -> **$80 SAT Essentials**; else **$130 SAT Accelerator**.
+
+### 7.11 Skills timing capture (F-M-Timer)
+Each of the 8 scored skills questions (Q5–Q12, Section 2 only) shows a per-question countdown.
+Limits scale with difficulty (point value + reading length):
+
+| Q | limit | Q | limit |
+|---|---|---|---|
+| Q5 (M,1) | 45s | Q9 (M,2) | 60s |
+| Q6 (RW,1) | 45s | Q10 (RW,2) | 60s |
+| Q7 (M,2) | 60s | Q11 (M,3) | 50s |
+| Q8 (RW,2) | 50s | Q12 (RW,3) | 70s |
+
+When a question's countdown runs out the flow **auto-advances**, recording the current selection
+(if any) and marking that question **timed out**; a timed-out blank is completed later via the
+existing pre-submit completeness guard (so the submission never 400s on a missing answer). The
+client sends `skills_timings` = `{ q5:{sec,timed_out}, … q12 }`; the server stores per-question
+detail (`skills_timings` JSON) plus two aggregates — `skills_time_total_sec` and
+`skills_timed_out_count` — and feeds `timed_out_count` into §7.5. Context and contact questions
+(Sections 1, 3, 4) are **not** timed. This is measurement only — it never changes band/score/gap.
 
 ---
 
@@ -346,7 +380,7 @@ Auto-sending WhatsApp or email · consultation/call booking · payment processin
 
 **Scoring engine (golden tests — must match the reference spreadsheet exactly):**
 - **Rami** (target 1350-1449; Grade 12; Within 8 weeks; Official 1100-1299; Q-answers giving math_raw=5, rw_raw=6 with Q10 correct; timing "right on time"; hours 5-8; prep "On my own"; whatsapp+school present) -> band `1040-1200`, confidence Moderate, archetype **Plateaued Retaker**, current_mid 1120, gap 280, timeline **Aggressive**, program **$130 Accelerator**, lead_score 11, status **HOT**.
-- **Lina** (target 1250-1349; Grade 11; 4-6 months; Practice 1100-1299; math_raw=6, rw_raw=6; timing "Run out..."; hours 2-4; prep "school"; whatsapp only) -> band `960-1120`, confidence Low-Moderate, archetype **Time-Pressured**, current_mid 1040, gap 260, timeline **Comfortable**, program **$130 Accelerator**, lead_score 7.5, status **WARM**. *(lead_score rose from 6.5 to 7.5: the lowered band widens the gap to 260, which crosses the ≥150 gap sub-score threshold; status stays WARM.)*
+- **Lina** (target 1250-1349; Grade 11; 4-6 months; Practice 1100-1299; math_raw=6, rw_raw=6; timing "Run out..." **AND measured: timed out on 3 of 8 skills questions**; hours 2-4; prep "school"; whatsapp only) -> band `960-1120`, confidence Low-Moderate, archetype **Time-Pressured**, current_mid 1040, gap 260, timeline **Comfortable**, program **$130 Accelerator**, lead_score 7.5, status **WARM**. *(Under F-M-Timer the archetype is now driven by the MEASURED timeouts, not the self-report; the expected outputs are unchanged because her timing genuinely shows her running out of time. Rami/Karim time out on nothing, so their archetypes are unchanged too.)*
 - **Karim** (target Not sure; Grade 10; No date; Never; math_raw=2, rw_raw=4; timing "never done timed"; hours <2; prep "Not really"; whatsapp only) -> band `650-790`, confidence Low, archetype **Untested Unknown**, current_mid 720, gap null, timeline **Early / lots of runway**, program **$80 Essentials**, lead_score 4, status **COLD**.
 
 **End-to-end:**

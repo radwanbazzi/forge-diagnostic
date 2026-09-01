@@ -47,6 +47,53 @@
 	transition: width 0.28s ease;
 }
 
+/* ── Per-question countdown (F-M-Timer, Section 2 only). Calm by design: an amber bar
+   that quietly depletes, shifting to molten only in the final 10s — no red alarm. ── */
+.fd-timer {
+	margin: 2px 0 20px;
+}
+.fd-timer-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: 7px;
+}
+.fd-timer-label {
+	font-size: 11px;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--grey-text);
+}
+.fd-timer-count {
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--ink-soft);
+	font-variant-numeric: tabular-nums;
+}
+.fd-timer-track {
+	height: 5px;
+	background: var(--rule);
+	border-radius: 999px;
+	overflow: hidden;
+}
+.fd-timer-fill {
+	height: 100%;
+	background: var(--amber);
+	border-radius: 999px;
+	transition: width 0.25s linear;
+}
+.fd-timer.is-low .fd-timer-count {
+	color: var(--molten-text);
+}
+.fd-timer.is-low .fd-timer-fill {
+	background: var(--molten);
+}
+@media (prefers-reduced-motion: reduce) {
+	.fd-timer-fill {
+		transition: none;
+	}
+}
+
 .fd-topline {
 	display: flex;
 	justify-content: space-between;

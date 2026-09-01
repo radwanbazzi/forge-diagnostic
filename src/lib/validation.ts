@@ -30,6 +30,26 @@ const answersSchema = z.object({
 	worried_about: z.enum(ANSWER_OPTIONS.worried_about),
 });
 
+/**
+ * Measured timing for the 8 scored skills questions (F-M-Timer). `sec` is clamped to a sane
+ * ceiling so a stuck tab can't report absurd values. Sent by the frontend for every real
+ * submission; OPTIONAL so a legacy client (or a test) without timing still validates.
+ */
+const questionTimingSchema = z.object({
+	sec: z.number().int().nonnegative().max(3600),
+	timed_out: z.boolean(),
+});
+const skillsTimingsSchema = z.object({
+	q5: questionTimingSchema,
+	q6: questionTimingSchema,
+	q7: questionTimingSchema,
+	q8: questionTimingSchema,
+	q9: questionTimingSchema,
+	q10: questionTimingSchema,
+	q11: questionTimingSchema,
+	q12: questionTimingSchema,
+});
+
 const contactSchema = z.object({
 	first_name: z.string().trim().min(1),
 	whatsapp: z.string().trim().min(1),
@@ -43,6 +63,7 @@ export const submissionSchema = z.object({
 	session_id: z.string().trim().min(1),
 	source: z.string().optional(),
 	completion_time_sec: z.number().int().nonnegative().optional(),
+	skills_timings: skillsTimingsSchema.optional(),
 	answers: answersSchema,
 	contact: contactSchema,
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { leadStatus } from '../src/lib/leadScore';
 import { leadingLetter, score } from '../src/lib/scoring';
 import type { Answers, Computed } from '../src/types';
-import { GOLDENS } from './fixtures';
+import { GOLDENS, timings } from './fixtures';
 
 // ─── helpers (all using the exact locked option strings) ──────────────────────
 
@@ -13,7 +13,7 @@ const CORRECT = {
 	q7: 'B) 4',
 	q8: 'B) self-reproach',
 	q9: 'B) 96%',
-	q10: 'B) library; only',
+	q10: 'B) ;',
 	q11: 'A) 12',
 	q12: 'B) Food may have been prepared or eaten outside the walled area.',
 } as const;
@@ -30,7 +30,7 @@ function baseAnswers(overrides: Partial<Answers> = {}): Answers {
 		q7: 'A) 3',
 		q8: 'A) nostalgia',
 		q9: 'A) 100%',
-		q10: 'A) library, only',
+		q10: 'A) ,',
 		q11: 'B) 9',
 		q12: 'A) The inhabitants did not eat the grain they grew.',
 		hours_per_week: '2–4',
@@ -47,7 +47,7 @@ function baseAnswers(overrides: Partial<Answers> = {}): Answers {
 describe('golden cases (PRD §17)', () => {
 	for (const [name, g] of Object.entries(GOLDENS)) {
 		it(`${name} → matches the reference spreadsheet exactly`, () => {
-			const result = score({ answers: g.answers, contact: { whatsapp: g.contact.whatsapp, school: g.contact.school ?? null } });
+			const result = score({ answers: g.answers, timing: g.timing, contact: { whatsapp: g.contact.whatsapp, school: g.contact.school ?? null } });
 			expect(result).toEqual(g.expected);
 		});
 	}
@@ -111,8 +111,8 @@ describe('estimated band from raw sections (§7.2)', () => {
 });
 
 describe('archetype precedence (§7.5, first match wins)', () => {
-	it('Time-Pressured beats Lopsided when the student runs out of time', () => {
-		// math 8, rw 1 → |diff|=7 (would be Lopsided R&W-weak) but timing says "Run out"
+	it('Time-Pressured beats Lopsided when the student MEASURABLY runs out of time', () => {
+		// math 8, rw 1 → |diff|=7 (would be Lopsided R&W-weak) but they timed out on 3 questions.
 		const answers = baseAnswers({
 			timing: 'Run out of time and rush or guess the last questions',
 			q5: CORRECT.q5,
@@ -121,7 +121,8 @@ describe('archetype precedence (§7.5, first match wins)', () => {
 			q11: CORRECT.q11,
 			q6: CORRECT.q6,
 		});
-		expect(score({ answers, contact: {} }).archetype).toBe('Time-Pressured');
+		const timing = timings({ q10: [60, true], q11: [50, true], q12: [70, true] }); // 3 timeouts
+		expect(score({ answers, timing, contact: {} }).archetype).toBe('Time-Pressured');
 	});
 
 	it('Lopsided (Math-weak) when math << rw', () => {
@@ -149,6 +150,44 @@ describe('archetype precedence (§7.5, first match wins)', () => {
 	it('Plateaued Retaker when a prior test exists and no earlier rule fires', () => {
 		const answers = baseAnswers({ sat_history: 'Official SAT — 1100–1299' }); // raw 0/0, balanced
 		expect(score({ answers, contact: {} }).archetype).toBe('Plateaued Retaker');
+	});
+});
+
+describe('MEASURED Time-Pressured (§7.5, F-M-Timer) — behavior, not self-report', () => {
+	it('fast-and-careless (≈30s total, 0 timeouts) is NEVER Time-Pressured — even claiming "Run out"', () => {
+		// The founder-style run: rushes, answers everything in a few seconds, clicks randomly.
+		// Even with the self-report "Run out of time…", 0 timeouts means it can't be Time-Pressured.
+		const answers = baseAnswers({ timing: 'Run out of time and rush or guess the last questions' });
+		const careless = timings({
+			q5: [3, false], q6: [3, false], q7: [4, false], q8: [4, false],
+			q9: [4, false], q10: [3, false], q11: [5, false], q12: [4, false],
+		}); // total ≈ 30s, 0 timeouts
+		const result = score({ answers, timing: careless, contact: {} });
+		expect(result.archetype).not.toBe('Time-Pressured');
+		expect(result.archetype).toBe('Untested Unknown'); // all-wrong, never-taken → falls through
+	});
+
+	it('genuinely out of time (3 timeouts) IS Time-Pressured — even if they did NOT self-report it', () => {
+		const answers = baseAnswers({ timing: 'Finish right on time' }); // self-report says otherwise
+		const slow = timings({ q7: [60, true], q11: [50, true], q12: [70, true] }); // 3 timeouts
+		expect(score({ answers, timing: slow, contact: {} }).archetype).toBe('Time-Pressured');
+	});
+
+	it('corroborated path: 1 timeout + self-reported "Run out" → Time-Pressured', () => {
+		const answers = baseAnswers({ timing: 'Run out of time and rush or guess the last questions' });
+		const one = timings({ q12: [70, true] }); // exactly 1 timeout
+		expect(score({ answers, timing: one, contact: {} }).archetype).toBe('Time-Pressured');
+	});
+
+	it('1 timeout but NO self-report of running out → NOT Time-Pressured (below the measured threshold)', () => {
+		const answers = baseAnswers({ sat_history: 'Official SAT — 1100–1299', timing: 'Finish right on time' });
+		const one = timings({ q12: [70, true] }); // 1 timeout, not corroborated
+		expect(score({ answers, timing: one, contact: {} }).archetype).toBe('Plateaued Retaker');
+	});
+
+	it('self-report alone with NO timing captured → NOT Time-Pressured (self-report is no longer a trigger)', () => {
+		const answers = baseAnswers({ sat_history: 'Official SAT — 1100–1299', timing: 'Run out of time and rush or guess the last questions' });
+		expect(score({ answers, contact: {} }).archetype).toBe('Plateaued Retaker'); // timing omitted
 	});
 });
 
@@ -191,7 +230,7 @@ describe('lead status thresholds (§7.9, ref AQ2: HOT ≥ 8 · WARM ≥ 5 · COL
 describe('leadingLetter (§7.1 matching)', () => {
 	it('takes the first letter, uppercased, ignoring surrounding whitespace', () => {
 		expect(leadingLetter('C) 300')).toBe('C');
-		expect(leadingLetter('  b) library; only')).toBe('B');
+		expect(leadingLetter('  b) ;')).toBe('B');
 		expect(leadingLetter('A) 12')).toBe('A');
 	});
 });

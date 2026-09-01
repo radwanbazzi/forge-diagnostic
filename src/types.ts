@@ -72,10 +72,29 @@ export interface ScoringContact {
 	school?: string | null;
 }
 
-/** Input to the pure scoring function: the answers plus the contact fields §7.9 needs. */
+/**
+ * MEASURED timing for one scored skills question (F-M-Timer, PRD §7.11).
+ * `sec` = seconds the student actually spent; `timed_out` = they hit the countdown limit
+ * before answering. The archetype engine uses these — not the self-report — to detect
+ * genuinely running out of time.
+ */
+export interface SkillsQuestionTiming {
+	sec: number;
+	timed_out: boolean;
+}
+
+/** Measured timing for all 8 scored skills questions (Q5–Q12), keyed by field. */
+export type SkillsTimings = Record<'q5' | 'q6' | 'q7' | 'q8' | 'q9' | 'q10' | 'q11' | 'q12', SkillsQuestionTiming>;
+
+/**
+ * Input to the pure scoring function: the answers, the contact fields §7.9 needs, and the
+ * OPTIONAL measured skills timing (§7.11). When timing is absent (e.g. a legacy client), the
+ * "Time-Pressured" archetype cannot fire — self-report alone is no longer a trigger (§7.5).
+ */
 export interface ScoreInput {
 	answers: Answers;
 	contact: ScoringContact;
+	timing?: SkillsTimings;
 }
 
 /**
