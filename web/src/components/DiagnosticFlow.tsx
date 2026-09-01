@@ -71,6 +71,9 @@ export default function DiagnosticFlow() {
 	const startedAt = useRef<number>(Date.now());
 	// One stable session id per attempt: shared by the submission and every analytics event.
 	const sessionId = useRef<string>(crypto.randomUUID());
+	// Locks the 160ms auto-advance below so a burst of taps can't queue more than one
+	// screen change (see selectOption).
+	const advancing = useRef(false);
 
 	const onContactScreen = step === CHOICE_QUESTIONS.length;
 	const currentQuestion = onContactScreen ? null : CHOICE_QUESTIONS[step];
@@ -88,9 +91,19 @@ export default function DiagnosticFlow() {
 	}
 
 	function selectOption(field: string, value: string) {
+		// Ignore taps while a screen change is already pending. Without this lock, tapping
+		// faster than the 160ms transition queued a SECOND advance, so the next question was
+		// skipped (flashed with no answer recorded) → a missing answer → the submit 400'd.
+		if (advancing.current) return;
+		advancing.current = true;
 		setAnswers((prev) => ({ ...prev, [field]: value }));
-		// Smooth auto-advance to the next screen after a brief visual confirm.
-		window.setTimeout(() => setStep((s) => Math.min(s + 1, CHOICE_QUESTIONS.length)), 160);
+		// Smooth auto-advance to the next screen after a brief visual confirm. Advance ONLY
+		// from the screen this tap was made on (`from`), so at most one step is ever crossed.
+		const from = step;
+		window.setTimeout(() => {
+			setStep((s) => (s === from ? Math.min(s + 1, CHOICE_QUESTIONS.length) : s));
+			advancing.current = false;
+		}, 160);
 	}
 
 	// Contact-screen validity: required fields present + consent ticked (school is optional).
@@ -103,6 +116,15 @@ export default function DiagnosticFlow() {
 	async function handleSubmit() {
 		// Guard: invalid contact, or a request already in flight (double-tap safety).
 		if (!contactValid || status === 'loading') return;
+
+		// Defence in depth: never POST an incomplete set of answers. If a question was ever
+		// left unanswered, jump the student back to the first one instead of sending a broken
+		// payload and dead-ending on "Something went wrong" (which silently loses the lead).
+		const firstUnanswered = CHOICE_QUESTIONS.findIndex((q) => !answers[q.field]);
+		if (firstUnanswered !== -1) {
+			setStep(firstUnanswered);
+			return;
+		}
 
 		// Assemble the EXACT shape POST /api/diagnostic/submit expects (validation.ts).
 		const submission = {
