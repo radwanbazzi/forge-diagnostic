@@ -35,5 +35,8 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Test web (fast-tap regression guard)
+        run: npm --prefix web test
+
       - name: Build (dry-run — compiles the Worker without deploying)
         run: npx wrangler deploy --dry-run
