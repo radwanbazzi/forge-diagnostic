@@ -14,14 +14,14 @@
 	"upload_source_maps": true,
 
 	// D1 (SQLite) database — available in the Worker as `env.DB`.
-	// `database_id` below is a placeholder so local dev + tests work offline.
-	// Replace it with the real id printed by `npx wrangler d1 create forge_diagnostic`
-	// before deploying (or before running any `--remote` command).
+	// `database_id` is the real remote database created with
+	// `npx wrangler d1 create forge_diagnostic` (region WEUR). Local dev + tests use a
+	// LOCAL SQLite store; only `--remote` commands touch this remote database.
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "forge_diagnostic",
-			"database_id": "00000000-0000-0000-0000-000000000000",
+			"database_id": "99da9d06-4bc6-42d0-9618-d3907d512730",
 			"migrations_dir": "migrations"
 		}
 	],
