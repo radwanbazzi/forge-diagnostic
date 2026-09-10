@@ -26,9 +26,6 @@ export interface ResultPayload {
 		whatsapp_prefill: string;
 		/** Fully-built wa.me link, or null when WHATSAPP_NUMBER is unset (never a broken link). */
 		whatsapp_url: string | null;
-		whish_note: string;
-		/** The Whish payment link, or null when WHISH_LINK is unset. */
-		whish_link: string | null;
 	};
 	meta: { first_name: string; overall_band: string; archetype: string; lead_status: string; recommended_program: string };
 }

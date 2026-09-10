@@ -85,7 +85,6 @@ diagnostic.post('/submit', async (c) => {
 	// Snapshot the exact rendered result (§8). Env values drive the CTA (US-2/F2.1 fallback).
 	const result_payload = buildResultPayload(computed, answers, contact.first_name, {
 		whatsappNumber: c.env.WHATSAPP_NUMBER,
-		whishLink: c.env.WHISH_LINK,
 	});
 
 	// One row: identity + answers + contact + computed snapshot + payload.

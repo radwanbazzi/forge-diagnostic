@@ -10,7 +10,7 @@
  *   6. ranked top-3 fixes
  *   7. timeline verdict
  *   8. program recommendation ($80 / $130) tied to the bottleneck
- *   + primary CTA: WhatsApp button (pre-filled) and the Whish payment note
+ *   + primary CTA: WhatsApp button (pre-filled)
  *
  * NOTHING is recomputed here — every string comes from the payload the Worker built and
  * persisted at submit time. No scoring logic or answer key exists in this file (or bundle).
@@ -146,7 +146,7 @@ export default function ResultScreen({ payload, sessionId }: { payload: ResultPa
 				{recommendation.guarantee ? <p className="fr-guarantee">{recommendation.guarantee}</p> : null}
 			</section>
 
-			{/* Primary CTA — WhatsApp (pre-filled) + Whish note. Never a broken wa.me link. */}
+			{/* Primary CTA — WhatsApp (pre-filled). Never a broken wa.me link. */}
 			<section className="fr-cta">
 				{cta.whatsapp_url ? (
 					<a
@@ -164,14 +164,6 @@ export default function ResultScreen({ payload, sessionId }: { payload: ResultPa
 						<span aria-hidden="true">💬</span> WhatsApp — coming soon
 					</button>
 				)}
-				<p className="fr-whish">
-					{cta.whish_note}{' '}
-					{cta.whish_link ? (
-						<a className="fr-whish-link" href={cta.whish_link} target="_blank" rel="noopener noreferrer">
-							Pay via Whish →
-						</a>
-					) : null}
-				</p>
 			</section>
 		</main>
 	);

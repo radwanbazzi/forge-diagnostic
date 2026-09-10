@@ -151,7 +151,7 @@ import diagnostic from "./routes/diagnostic";
 import admin from "./routes/admin";
 import events from "./routes/events";
 
-export type Env = { DB: D1Database; WHATSAPP_NUMBER: string; WHISH_LINK: string };
+export type Env = { DB: D1Database; WHATSAPP_NUMBER: string };
 
 const app = new Hono<{ Bindings: Env }>();
 app.route("/api/health", health);

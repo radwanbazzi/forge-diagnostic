@@ -26,7 +26,7 @@ export function buildFounderWhatsAppMessage(lead: Diagnostic, payload?: ResultPa
 	];
 	if (topFix) lines.push(`🔧 First thing to work on: ${topFix}`);
 	lines.push(`🚀 Recommended next step: ${program}`);
-	lines.push('', `Want to turn this into a plan and hit your target? Just reply here — payment is quick via Whish.`);
+	lines.push('', `Want to turn this into a plan and hit your target? Just reply here.`);
 
 	return lines.join('\n');
 }

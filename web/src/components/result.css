@@ -254,20 +254,6 @@
 	opacity: 0.65;
 	cursor: not-allowed;
 }
-.fr-whish {
-	margin-top: 14px;
-	font-size: 15px;
-	color: var(--ink-soft);
-}
-.fr-whish-link {
-	color: var(--molten-text);
-	font-weight: 600;
-	text-decoration: underline;
-	white-space: nowrap;
-}
-.fr-whish-link:hover {
-	text-decoration: underline;
-}
 
 /* ─────────────── Flow transitional states (loading / error) ────── */
 .fd-status {
@@ -321,7 +307,7 @@
 	box-shadow: 0 1px 0 var(--molten-dark);
 }
 /* Keyboard focus (F-M4a): clear focus ring on the result-screen controls
-   (WhatsApp CTA, Whish link) and the error-state retry button. */
+   (the WhatsApp CTA) and the error-state retry button. */
 .fr-shell :focus-visible,
 .fd-status :focus-visible {
 	outline: 3px solid var(--molten);

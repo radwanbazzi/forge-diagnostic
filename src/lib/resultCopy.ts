@@ -1,6 +1,6 @@
 /**
  * Builds the student-facing `result_payload` from the computed fields (PRD §8).
- * Pure: environment-specific values (WhatsApp number, Whish link) are passed in.
+ * Pure: environment-specific values (the WhatsApp number) are passed in.
  *
  * Hard rule (US-6 / F6.1): the output must NEVER contain an unfilled `[bracket]`
  * or the string "undefined". Every slot is built from known values with a safe
@@ -20,7 +20,7 @@ export interface ResultPayload {
 	top_fixes: string[];
 	timeline: { verdict: string; line: string };
 	recommendation: { program: string; text: string; guarantee: string | null };
-	cta: { whatsapp_prefill: string; whatsapp_url: string | null; whish_note: string; whish_link: string | null };
+	cta: { whatsapp_prefill: string; whatsapp_url: string | null };
 	meta: { first_name: string; overall_band: string; archetype: string; lead_status: string; recommended_program: string };
 }
 
@@ -128,7 +128,6 @@ function waDigits(n: string): string {
 
 export interface ResultCopyConfig {
 	whatsappNumber?: string | null;
-	whishLink?: string | null;
 }
 
 export function buildResultPayload(
@@ -205,8 +204,6 @@ export function buildResultPayload(
 		cta: {
 			whatsapp_prefill: prefill,
 			whatsapp_url: cfg.whatsappNumber ? `https://wa.me/${waDigits(cfg.whatsappNumber)}?text=${encodeURIComponent(prefill)}` : null,
-			whish_note: 'Payment is quick via Whish.',
-			whish_link: cfg.whishLink ?? null,
 		},
 		meta: {
 			first_name: firstName,

@@ -35,7 +35,7 @@ Convert Instagram/WhatsApp/referral traffic into qualified, scored leads by deli
 Framed as *"get clarity on where you stand,"* never a sales quiz. The full result is given free; the only gate is WhatsApp contact captured *before* the result renders. No fake "unlock your score" locks.
 
 ### 1.5 Non-goals (v1)
-No auto-sending of WhatsApp/email. No consultation booking. No payment processing (Whish link only). No adaptive/IRT testing. No student accounts.
+No auto-sending of WhatsApp/email. No consultation booking. No payment processing. No adaptive/IRT testing. No student accounts.
 
 ---
 
@@ -78,7 +78,7 @@ Landing (value prop, "Start" CTA)  — static, SEO-friendly (Astro)
       • top-3 fixes ranked
       • timeline verdict
       • program recommendation ($80/$130)
-      • WhatsApp CTA (pre-filled) + Whish note
+      • WhatsApp CTA (pre-filled)
 ```
 
 ### 3.2 Admin flow
@@ -317,7 +317,7 @@ The result page renders these blocks from the payload. Copy is templated per arc
 - **Timeline verdict:** "[timeline_verdict] — [one line tied to gap + test_date]."
 - **Recommendation:** name `recommended_program`, tie its 1-2 features to their bottleneck; mention Score Improvement Guarantee only for Accelerator, with baseline = Week-1 full mock.
   - **Gap line (target-aware framing):** when the student named a target (`target_num > 0`) **and** the estimate falls short (`gap > 0`), append a line that names the target and the gap and positions Forge as the bridge — e.g. *"You're aiming for [target_num], and your estimate sits around [current_mid]. That's a [gap]-point gap — exactly the kind of distance a structured Forge plan is built to close."* If the target is "Not sure" (`gap` null) or the estimate already meets/exceeds the target (`gap <= 0`), omit the line. This is **copy only**: the target changes the framing/urgency, **never** the band/`current_mid`/`gap`/archetype/lead score/program — two identical answer sets with different targets always produce the same band. Never promise a guaranteed score.
-- **CTA:** WhatsApp button (pre-filled) + "Payment is quick via Whish."
+- **CTA:** WhatsApp button (pre-filled). No payment link or payment copy on the result screen -- payment is arranged privately over WhatsApp.
 
 **Archetype -> meaning / real_bottleneck / top-3 fixes**
 - **Time-Pressured** — "the clock, not the content." Fixes: pacing drills · skip-and-return system · timed full sections.
@@ -374,7 +374,7 @@ The result page renders these blocks from the payload. Copy is templated per arc
 Student diagnostic flow · server-side scoring · instant on-screen result · lead persistence (D1) · admin dashboard (Cloudflare Access) with manual fields · basic analytics (completion + drop-off) · WhatsApp CTA · consent/privacy · Forge branding.
 
 ## 16. Out of Scope (explicit — do NOT build in v1)
-Auto-sending WhatsApp or email · consultation/call booking · payment processing (Whish link only) · adaptive/IRT testing · per-question timers (stretch, not v1) · student accounts/login · multi-admin roles · email result delivery · A/B testing framework · CMS for questions (questions live in a typed config file) · record deletion from the UI.
+Auto-sending WhatsApp or email · consultation/call booking · payment processing of any kind (no payment link on the site) · adaptive/IRT testing · per-question timers (stretch, not v1) · student accounts/login · multi-admin roles · email result delivery · A/B testing framework · CMS for questions (questions live in a typed config file) · record deletion from the UI.
 
 ## 17. Acceptance Criteria
 
@@ -403,7 +403,7 @@ The authoritative, incremental build plan is the **backend milestones B0-B7 in `
 - **F-M1** — Diagnostic flow (React island): 22 questions, 4 sections, one-per-screen mobile, progress bar, validation, contact+consent gate. Answers assembled client-side.
 - **F-M2** — Wire the flow to `POST /api/diagnostic/submit`; render the returned result payload (Score Gauge motif, all §8 blocks, WhatsApp CTA).
 - **F-M3** — Admin dashboard (React island behind Cloudflare Access): leads table, filters/search, lead detail, editable manual fields, copy-WhatsApp-message, analytics view.
-- **F-M4** — Polish: accessibility pass, privacy page, seed env vars (WhatsApp number + Whish link), full §17 acceptance run, deploy to production.
+- **F-M4** — Polish: accessibility pass, privacy page, seed env vars (WhatsApp number), full §17 acceptance run, deploy to production.
 
 *(The old Next.js M0-M7 milestone list from v1 is retired; it referenced Vercel/Supabase/Tailwind and no longer applies.)*
 

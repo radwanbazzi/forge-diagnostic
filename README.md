@@ -114,12 +114,11 @@ Everything below is a one-time setup. Run from this folder.
    | Name | What it is | How to set |
    | ---- | ---------- | ---------- |
    | `WHATSAPP_NUMBER` | Forge's WhatsApp number (digits) | `npx wrangler secret put WHATSAPP_NUMBER` |
-   | `WHISH_LINK` | Whish payment link | `npx wrangler secret put WHISH_LINK` |
    | `ADMIN_EMAIL` | Your founder email (the only admin) | `npx wrangler secret put ADMIN_EMAIL` |
    | `ACCESS_TEAM_DOMAIN` | `https://<your-team>.cloudflareaccess.com` | `npx wrangler secret put ACCESS_TEAM_DOMAIN` |
    | `ACCESS_AUD` | Your Access application's AUD tag | `npx wrangler secret put ACCESS_AUD` |
 
-   > `WHATSAPP_NUMBER` and `WHISH_LINK` are not secret; you may instead put them in
+   > `WHATSAPP_NUMBER` is not secret; you may instead put it in
    > `wrangler.jsonc` under `"vars"`. Setting `ACCESS_AUD` is what turns the real admin lock on.
 5. **Configure Cloudflare Access** (Zero Trust → Access → Applications): protect the
    `/admin` and `/api/admin` paths with a policy that allows **only your email**. This is
@@ -149,7 +148,7 @@ Everything below is a one-time setup. Run from this folder.
 - [ ] `wrangler login`
 - [ ] `wrangler d1 create forge_diagnostic` → paste `database_id` into `wrangler.jsonc`
 - [ ] `npm run db:migrate:remote`
-- [ ] Set `WHATSAPP_NUMBER`, `WHISH_LINK`, `ADMIN_EMAIL`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`
+- [ ] Set `WHATSAPP_NUMBER`, `ADMIN_EMAIL`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`
 - [ ] Create the Cloudflare Access application (allow only your email)
 - [ ] `npm run deploy`
 - [ ] Add the `CLAUDE_CODE_OAUTH_TOKEN` GitHub secret (for `@claude` PR reviews)

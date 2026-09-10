@@ -18,8 +18,6 @@ export interface Bindings {
 	DB: D1Database;
 	/** Forge WhatsApp number used to build the pre-filled wa.me CTA link. */
 	WHATSAPP_NUMBER: string;
-	/** Whish payment link shown on the result screen. */
-	WHISH_LINK: string;
 
 	// ── Admin auth (Cloudflare Access) — see src/lib/access.ts ──
 	/** The single allowed admin email (the founder). Required for any admin auth. */
