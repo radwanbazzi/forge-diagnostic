@@ -1,7 +1,7 @@
 import { env, SELF } from 'cloudflare:test';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getDb } from '../src/db/client';
-import { diagnostics } from '../src/db/schema';
+import { diagnostics, events as eventsTable } from '../src/db/schema';
 import { RAMI } from './fixtures';
 
 // These match .dev.vars (loaded into the test worker env).
@@ -41,6 +41,7 @@ async function seed(leads: Array<Partial<typeof diagnostics.$inferInsert>>) {
 
 // Clean slate before every test regardless of storage isolation.
 beforeEach(async () => {
+	await getDb(env).delete(eventsTable);
 	await getDb(env).delete(diagnostics);
 });
 
@@ -222,5 +223,122 @@ describe('GET /api/admin/leads — search by phone as well as name (B8)', () => 
 	it('is still 401 without credentials', async () => {
 		const res = await SELF.fetch('https://x/api/admin/leads?q=70123456');
 		expect(res.status).toBe(401);
+	});
+});
+
+describe('GET /api/admin/leads — sweep queue + engagement (B8)', () => {
+	/** Mark a session as having tapped the WhatsApp CTA. */
+	async function clicked(session_id: string) {
+		await getDb(env).insert(eventsTable).values({
+			id: crypto.randomUUID(),
+			session_id,
+			created_at: T,
+			type: 'whatsapp_clicked',
+			question_index: null,
+			meta: null,
+		});
+	}
+
+	async function list(query: string) {
+		const res = await SELF.fetch(`https://x/api/admin/leads${query}`, { headers: auth });
+		return {
+			status: res.status,
+			body: (await res.json()) as { leads: Array<{ first_name: string; whatsapp_clicked: number }>; total: number },
+		};
+	}
+
+	it('reports whatsapp_clicked per lead', async () => {
+		const tapped = crypto.randomUUID();
+		await seed([
+			{ first_name: 'Tapped', session_id: tapped },
+			{ first_name: 'Quiet', session_id: crypto.randomUUID() },
+		]);
+		await clicked(tapped);
+
+		const { body } = await list('');
+		const byName = Object.fromEntries(body.leads.map((l) => [l.first_name, l.whatsapp_clicked]));
+		expect(byName.Tapped).toBe(1);
+		expect(byName.Quiet).toBe(0);
+	});
+
+	it('a click by an unrelated session does not mark a lead', async () => {
+		await seed([{ first_name: 'Quiet', session_id: crypto.randomUUID() }]);
+		await clicked(crypto.randomUUID()); // someone else entirely
+		const { body } = await list('');
+		expect(body.leads[0].whatsapp_clicked).toBe(0);
+	});
+
+	it('result_sent=0 returns only leads not yet sent', async () => {
+		await seed([
+			{ first_name: 'Pending', result_sent: 0 },
+			{ first_name: 'Done', result_sent: 1 },
+		]);
+		const { body } = await list('?result_sent=0');
+		expect(body.leads.map((l) => l.first_name)).toEqual(['Pending']);
+		expect(body.total).toBe(1);
+	});
+
+	it('result_sent=1 returns only leads already sent', async () => {
+		await seed([
+			{ first_name: 'Pending', result_sent: 0 },
+			{ first_name: 'Done', result_sent: 1 },
+		]);
+		const { body } = await list('?result_sent=1');
+		expect(body.leads.map((l) => l.first_name)).toEqual(['Done']);
+	});
+
+	it('engaged=0 returns the finished-but-went-quiet list', async () => {
+		const tapped = crypto.randomUUID();
+		await seed([
+			{ first_name: 'Tapped', session_id: tapped },
+			{ first_name: 'Quiet', session_id: crypto.randomUUID() },
+		]);
+		await clicked(tapped);
+		const { body } = await list('?engaged=0');
+		expect(body.leads.map((l) => l.first_name)).toEqual(['Quiet']);
+		expect(body.total).toBe(1);
+	});
+
+	it('engaged=1 returns only leads who tapped through', async () => {
+		const tapped = crypto.randomUUID();
+		await seed([
+			{ first_name: 'Tapped', session_id: tapped },
+			{ first_name: 'Quiet', session_id: crypto.randomUUID() },
+		]);
+		await clicked(tapped);
+		const { body } = await list('?engaged=1');
+		expect(body.leads.map((l) => l.first_name)).toEqual(['Tapped']);
+	});
+
+	it('the two filters combine', async () => {
+		const tapped = crypto.randomUUID();
+		await seed([
+			{ first_name: 'QuietPending', session_id: crypto.randomUUID(), result_sent: 0 },
+			{ first_name: 'QuietDone', session_id: crypto.randomUUID(), result_sent: 1 },
+			{ first_name: 'TappedPending', session_id: tapped, result_sent: 0 },
+		]);
+		await clicked(tapped);
+		const { body } = await list('?engaged=0&result_sent=0');
+		expect(body.leads.map((l) => l.first_name)).toEqual(['QuietPending']);
+	});
+
+	it('F3.4 an invalid result_sent value → 400 invalid_filter', async () => {
+		const res = await SELF.fetch('https://x/api/admin/leads?result_sent=maybe', { headers: auth });
+		expect(res.status).toBe(400);
+		const body = (await res.json()) as { error: string; field: string };
+		expect(body.error).toBe('invalid_filter');
+		expect(body.field).toBe('result_sent');
+	});
+
+	it('F3.4 an invalid engaged value → 400 invalid_filter', async () => {
+		const res = await SELF.fetch('https://x/api/admin/leads?engaged=yes', { headers: auth });
+		expect(res.status).toBe(400);
+		const body = (await res.json()) as { error: string; field: string };
+		expect(body.error).toBe('invalid_filter');
+		expect(body.field).toBe('engaged');
+	});
+
+	it('is still 401 without credentials', async () => {
+		expect((await SELF.fetch('https://x/api/admin/leads?result_sent=0')).status).toBe(401);
 	});
 });

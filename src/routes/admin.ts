@@ -43,6 +43,18 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  */
 const WHATSAPP_DIGITS = sql`replace(replace(replace(replace(replace(replace(${diagnostics.whatsapp}, ' ', ''), '-', ''), '+', ''), '(', ''), ')', ''), '.', '')`;
 
+/**
+ * Did this lead tap the WhatsApp CTA? A correlated EXISTS keeps the list at one COUNT +
+ * one paged SELECT (no N+1); idx_events_session_type makes it a point lookup.
+ *
+ * ⚠️ Both sides of the correlation are written as literal SQL on purpose. Interpolating
+ * the Drizzle columns (`${eventsTable.session_id} = ${diagnostics.session_id}`) emits them
+ * UNQUALIFIED, so inside the subquery both resolve to the inner table and the predicate
+ * degrades to `session_id = session_id` — always true, marking every lead as engaged.
+ * Keep the explicit `e.` / `diagnostics.` prefixes.
+ */
+const WHATSAPP_CLICKED = sql<number>`EXISTS (SELECT 1 FROM events e WHERE e.session_id = diagnostics.session_id AND e.type = 'whatsapp_clicked')`;
+
 /** Lean list projection (PRD §9 columns + a few), never the heavy result_payload/answers. */
 const LIST_COLUMNS = {
 	id: diagnostics.id,
@@ -59,6 +71,7 @@ const LIST_COLUMNS = {
 	result_sent: diagnostics.result_sent,
 	followup_status: diagnostics.followup_status,
 	outcome: diagnostics.outcome,
+	whatsapp_clicked: WHATSAPP_CLICKED,
 };
 
 /** Parse a from/to date filter: accepts unix-ms (digits) or an ISO date/datetime string. */
@@ -82,6 +95,20 @@ admin.get('/leads', async (c) => {
 		const p = q.program === '80' ? PROGRAMS[0] : q.program === '130' ? PROGRAMS[1] : (q.program as (typeof PROGRAMS)[number]);
 		if (!PROGRAMS.includes(p)) return c.json({ error: 'invalid_filter', field: 'program', allowed: [...PROGRAMS, '80', '130'] }, 400);
 		conds.push(eq(diagnostics.recommended_program, p));
+	}
+
+	if (q.result_sent !== undefined) {
+		if (q.result_sent !== '0' && q.result_sent !== '1') {
+			return c.json({ error: 'invalid_filter', field: 'result_sent', allowed: ['0', '1'] }, 400);
+		}
+		conds.push(eq(diagnostics.result_sent, q.result_sent === '1' ? 1 : 0));
+	}
+
+	if (q.engaged !== undefined) {
+		if (q.engaged !== '0' && q.engaged !== '1') {
+			return c.json({ error: 'invalid_filter', field: 'engaged', allowed: ['0', '1'] }, 400);
+		}
+		conds.push(sql`${WHATSAPP_CLICKED} = ${q.engaged === '1' ? 1 : 0}`);
 	}
 
 	if (q.from !== undefined) {
