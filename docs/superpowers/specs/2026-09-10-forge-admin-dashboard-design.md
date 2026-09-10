@@ -84,16 +84,20 @@ change is required** for this piece.
 | Event | When | `question_index` |
 |-------|------|------------------|
 | `start` | once, on first mount | — |
-| `advance` | the first time each question is shown | the question's 1-based number `n` from `QUESTIONS` |
-| `contact_reached` | once, when the first `section: 4` question is shown (`n = 18`) | — |
+| `advance` | the first time each question screen is shown | the question's 1-based number `n` from `QUESTIONS` (1–17) |
+| `contact_reached` | once, when the contact screen is shown | — |
 
-**All 22 questions fire `advance`, contact fields included.** `QUESTIONS` covers the whole
-flow: section 1 is Q1–Q4, section 2 the eight scored skills questions Q5–Q12, section 3
-Q13–Q17, and **section 4 is the contact gate** — Q18–Q20 (`first_name`, `whatsapp`,
-`school`), Q21 (`respondent_type`), Q22 (`consent`). So the funnel measures drop-off
-across the contact gate as well as the quiz, which is exactly where abandonment tends to
-concentrate. `contact_reached` is therefore a convenience marker for the section-4
-boundary, not a separate step in the flow.
+**There are 18 screens, not 22.** `DiagnosticFlow` derives its screens as
+`CHOICE_QUESTIONS = QUESTIONS.filter(q => q.section !== 4)` — the 17 one-per-screen
+questions of sections 1–3 (Q1–Q4 context, Q5–Q12 scored skills, Q13–Q17 habits) — and then
+renders **all of section 4 (Q18–Q22: name, WhatsApp, school, respondent type, consent) on a
+single final contact screen**.
+
+So `advance` covers Q1–Q17 only, and `contact_reached` *is* the contact-gate signal — there
+is no per-question advance inside section 4 because there are no separate screens there.
+The funnel is therefore **17 question bars + one contact-gate bar + completed**, which still
+answers the owner's question exactly: it distinguishes quitting on the quiz from quitting
+when asked for a phone number.
 
 **`question_index` is defined as the 1-based question number** (`QUESTIONS[i].n`, i.e. 1–22),
 not an array offset. This makes the funnel directly legible ("Q8") and lets the insights
@@ -261,19 +265,22 @@ Three blocks, in the owner's stated priority order.
 
 ### 6.1 Where students quit (primary)
 
-A horizontal bar per question 1–22, each labelled with its **real question text** from
-`src/lib/questions.ts` (browser-safe; contains no answer key), joined on the 1-based `n`
-defined in §3. Each row shows how many distinct sessions reached that question and how
-many were lost between it and the previous one. The three biggest losses are highlighted.
+A horizontal bar per screen — **Q1–Q17, then the contact gate, then completed** — each
+labelled with its **real question text** from `src/lib/questions.ts` (browser-safe; contains
+no answer key), joined on the 1-based `n` defined in §3. Each row shows how many distinct
+sessions reached that screen and how many were lost between it and the previous one. The
+three biggest losses are highlighted.
+
+The contact-gate bar is fed by `contact_reached` and the final bar by `completed`, so the
+funnel runs unbroken from "started the quiz" to "saw their result".
 
 Because `advance` fires on *reaching* a question, "lost at Q8" means reached Q8 and never
 reached Q9 — this must be stated on screen so the numbers are not misread.
 
 The bars are grouped by section so the shape of the flow is visible at a glance, and the
-**section 3 → section 4 boundary (Q17 → Q18) is marked as the contact gate** — the point
-where an anonymous quiz-taker is asked for their name and number. Drop-off there is a
-different problem from drop-off on a hard maths question, and the screen should not let
-the two be confused.
+**contact gate is marked distinctly** — it is the point where an anonymous quiz-taker is
+asked for their name and number. Drop-off there is a different problem from drop-off on a
+hard maths question, and the screen should not let the two be confused.
 
 ### 6.2 Finished but went quiet (primary)
 
