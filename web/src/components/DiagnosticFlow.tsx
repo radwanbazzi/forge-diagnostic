@@ -23,7 +23,7 @@ import {
 	type Question,
 } from '../../../src/lib/questions';
 import ResultScreen from './ResultScreen';
-import { submitDiagnostic, type ResultPayload } from '../lib/api';
+import { postEvent, submitDiagnostic, type ResultPayload } from '../lib/api';
 import './diagnostic.css';
 import './result.css';
 
@@ -133,6 +133,36 @@ export default function DiagnosticFlow() {
 		return () => window.clearInterval(id);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [step]);
+
+	// ── Analytics (PRD §11) ───────────────────────────────────────────────────────
+	// The funnel needs to know how far each session got. One 'start' per session, one
+	// 'advance' per question screen carrying its 1-based number n (1–17), and one
+	// 'contact_reached' when the section-4 contact screen appears — that last one is the
+	// contact gate, the point where an anonymous quiz-taker is asked for their number.
+	// Refs (not state) because React 18 StrictMode double-mounts in dev and back-navigation
+	// re-runs this effect; each event must fire at most once per session.
+	const startedRef = useRef(false);
+	const advancedRef = useRef<Set<number>>(new Set());
+	const contactReachedRef = useRef(false);
+
+	useEffect(() => {
+		if (!startedRef.current) {
+			startedRef.current = true;
+			postEvent(sessionId.current, 'start');
+		}
+		if (onContactScreen) {
+			if (!contactReachedRef.current) {
+				contactReachedRef.current = true;
+				postEvent(sessionId.current, 'contact_reached');
+			}
+			return;
+		}
+		const q = CHOICE_QUESTIONS[step];
+		if (q && !advancedRef.current.has(q.n)) {
+			advancedRef.current.add(q.n);
+			postEvent(sessionId.current, 'advance', q.n);
+		}
+	}, [step, onContactScreen]);
 
 	// Countdown hit zero with no answer chosen: record the timeout and move on (blank stays blank;
 	// the pre-submit completeness guard carries the student back to finish it, untimed).
