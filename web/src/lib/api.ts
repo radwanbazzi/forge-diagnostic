@@ -58,13 +58,21 @@ export async function submitDiagnostic(submission: unknown): Promise<SubmitRespo
  * Fire-and-forget analytics beacon (PRD §11 / US-7 / F2.2). Never throws, never blocks,
  * never breaks the result screen if it fails. `keepalive` lets it survive the navigation
  * that tapping the WhatsApp CTA triggers.
+ *
+ * `questionIndex` is the 1-based question number (PRD §11 funnel), sent only for 'advance'.
  */
-export function postEvent(sessionId: string, type: EventType): void {
+export function postEvent(sessionId: string, type: EventType, questionIndex?: number): void {
 	try {
+		const body: { session_id: string; type: EventType; question_index?: number } = {
+			session_id: sessionId,
+			type,
+		};
+		// Only 'advance' carries a question number; the server's eventSchema treats it as optional.
+		if (typeof questionIndex === 'number') body.question_index = questionIndex;
 		void fetch('/api/event', {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ session_id: sessionId, type }),
+			body: JSON.stringify(body),
 			keepalive: true,
 		}).catch(() => {
 			/* analytics failures are silent to the student */

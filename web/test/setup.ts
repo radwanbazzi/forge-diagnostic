@@ -9,4 +9,10 @@ if (!globalThis.crypto?.randomUUID) {
 	globalThis.crypto = webcrypto;
 }
 
+// Analytics beacons fire on mount (PRD §11). Give jsdom a no-op fetch so flow tests never
+// touch the network; individual tests override it with vi.stubGlobal when they assert on it.
+if (!globalThis.fetch) {
+	globalThis.fetch = (() => Promise.resolve(new Response('{}'))) as typeof fetch;
+}
+
 afterEach(() => cleanup());
