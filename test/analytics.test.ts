@@ -86,3 +86,53 @@ describe('GET /api/admin/analytics (US-7)', () => {
 		expect(d.enrollment_rate).toBe(0);
 	});
 });
+
+describe('GET /api/admin/analytics — audience mix (B8)', () => {
+	async function analytics() {
+		const res = await SELF.fetch('https://x/api/admin/analytics', { headers: auth });
+		expect(res.status).toBe(200);
+		return (await res.json()) as {
+			archetype_mix: Record<string, number>;
+			program_mix: Record<string, number>;
+			totals: { leads: number };
+		};
+	}
+
+	it('counts leads by archetype and by recommended programme', async () => {
+		const db = getDb(env);
+		for (const lead of [
+			makeLead({ archetype: 'Time-Pressured', recommended_program: '$130 SAT Accelerator' }),
+			makeLead({ archetype: 'Time-Pressured', recommended_program: '$130 SAT Accelerator' }),
+			makeLead({ archetype: 'Untested Unknown', recommended_program: '$80 SAT Essentials' }),
+		]) {
+			await db.insert(diagnostics).values(lead);
+		}
+
+		const body = await analytics();
+		expect(body.archetype_mix['Time-Pressured']).toBe(2);
+		expect(body.archetype_mix['Untested Unknown']).toBe(1);
+		expect(body.program_mix['$130 SAT Accelerator']).toBe(2);
+		expect(body.program_mix['$80 SAT Essentials']).toBe(1);
+	});
+
+	it('the mixes sum to the total lead count', async () => {
+		const db = getDb(env);
+		for (const lead of [makeLead({ archetype: 'Plateaued Retaker' }), makeLead({ archetype: 'Shaky Grammarian' })]) {
+			await db.insert(diagnostics).values(lead);
+		}
+		const body = await analytics();
+		const sum = (m: Record<string, number>) => Object.values(m).reduce((a, b) => a + b, 0);
+		expect(sum(body.archetype_mix)).toBe(body.totals.leads);
+		expect(sum(body.program_mix)).toBe(body.totals.leads);
+	});
+
+	it('returns empty mixes on an empty database rather than failing', async () => {
+		const body = await analytics();
+		expect(body.archetype_mix).toEqual({});
+		expect(body.program_mix).toEqual({});
+	});
+
+	it('is still 401 without credentials', async () => {
+		expect((await SELF.fetch('https://x/api/admin/analytics')).status).toBe(401);
+	});
+});

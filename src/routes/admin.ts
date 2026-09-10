@@ -279,12 +279,23 @@ admin.get('/analytics', async (c) => {
 		let enrolled = 0;
 		for (const r of outcomeRows) if (r.outcome?.startsWith('Enrolled')) enrolled += r.n;
 
+		// Audience mix (B8): who the diagnostic is attracting. Plain COUNT/GROUP BY (F7.2).
+		const archetypeRows = await db.select({ k: diagnostics.archetype, n: count() }).from(diagnostics).groupBy(diagnostics.archetype);
+		const archetype_mix: Record<string, number> = {};
+		for (const r of archetypeRows) archetype_mix[r.k] = r.n;
+
+		const programRows = await db.select({ k: diagnostics.recommended_program, n: count() }).from(diagnostics).groupBy(diagnostics.recommended_program);
+		const program_mix: Record<string, number> = {};
+		for (const r of programRows) program_mix[r.k] = r.n;
+
 		return c.json({
 			started,
 			completed,
 			completion_rate: pct(completed, started),
 			funnel_by_question,
 			status_mix,
+			archetype_mix,
+			program_mix,
 			whatsapp_click_rate: pct(whatsapp_clicked, completed),
 			enrollment_rate: pct(enrolled, totalLeads),
 			totals: { leads: totalLeads, enrolled, whatsapp_clicked },
