@@ -29,6 +29,13 @@
       "when": 1789065670454,
       "tag": "0003_broken_scarlet_witch",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789071204376,
+      "tag": "0004_slim_sentinel",
+      "breakpoints": true
     }
   ]
 }

@@ -342,3 +342,39 @@ describe('GET /api/admin/leads — sweep queue + engagement (B8)', () => {
 		expect((await SELF.fetch('https://x/api/admin/leads?result_sent=0')).status).toBe(401);
 	});
 });
+
+describe('GET /api/admin/leads — search hardening (B8 review fixes)', () => {
+	async function names(query: string): Promise<string[]> {
+		const res = await SELF.fetch(`https://x/api/admin/leads?q=${encodeURIComponent(query)}`, { headers: auth });
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as { leads: Array<{ first_name: string }> };
+		return body.leads.map((l) => l.first_name).sort();
+	}
+
+	it('treats % as a literal, not a wildcard', async () => {
+		await seed([{ first_name: 'Ana' }, { first_name: 'Bob' }, { first_name: '100%Sure' }]);
+		// Unescaped, '%' would match every lead.
+		expect(await names('%')).toEqual(['100%Sure']);
+	});
+
+	it('treats _ as a literal, not a single-character wildcard', async () => {
+		await seed([{ first_name: 'abc' }, { first_name: 'a_c' }]);
+		expect(await names('a_c')).toEqual(['a_c']);
+	});
+
+	it('treats a backslash as a literal', async () => {
+		await seed([{ first_name: 'back\slash' }, { first_name: 'plain' }]);
+		expect(await names('back\slash')).toEqual(['back\slash']);
+	});
+
+	it('finds numbers separated by slashes, commas or non-breaking spaces', async () => {
+		await seed([
+			{ first_name: 'Slashed', whatsapp: '961/70/123456' },
+			{ first_name: 'Commad', whatsapp: '961,71,123456' },
+			{ first_name: 'Nbsp', whatsapp: '961\u00A072\u00A0123456' },
+		]);
+		expect(await names('96170123456')).toEqual(['Slashed']);
+		expect(await names('96171123456')).toEqual(['Commad']);
+		expect(await names('96172123456')).toEqual(['Nbsp']);
+	});
+});

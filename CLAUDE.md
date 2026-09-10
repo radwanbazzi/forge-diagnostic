@@ -67,12 +67,23 @@ npm run db:migrate:remote   # apply migrations to the REMOTE/prod D1 (needs real
 
 ## Status
 
-- **Backend B0–B7: done.** All `/api/*` endpoints implemented, hardened, and tested
-  (typecheck clean; full Vitest suite green). CI (`.github/workflows/ci.yml`) runs
-  typecheck + tests + build; `@claude` PR review via Pro OAuth (never an API key).
-- **Deploy is pending owner action** (see README "Deploy checklist"): `database_id` in
-  `wrangler.jsonc` is still a placeholder, and the production secrets + Cloudflare Access
-  application must be set up. The dev-only admin bypass (`.dev.vars` `DEV_ADMIN_SECRET`) is
+- **Backend B0–B8: done.** All `/api/*` endpoints implemented, hardened, and tested.
+  B8 (see BACKEND_SPEC §6) fixed the analytics instrumentation — `start` / `advance` /
+  `contact_reached` were specified in PRD §11 but never fired, so the drop-off funnel had no
+  data — and added leads-list phone search, `result_sent` + `engaged` filters, a
+  `whatsapp_clicked` column, and the archetype/programme mix.
+- **Frontend F-M0 → F-M2, F-M4a, F-M4b, F-M-Timer: done.** Landing page, the 22-question
+  flow, live result screen, accessibility pass, self-hosted fonts, measured per-question
+  timing. Whish payment was removed from the product entirely (owner decision).
+- **Infrastructure: real, not placeholder.** `database_id` in `wrangler.jsonc` is the live
+  remote D1 (region WEUR) and `WHATSAPP_NUMBER` is set as a production secret.
+- **NOT yet done:** the site has never been deployed; `ADMIN_EMAIL`, `ACCESS_TEAM_DOMAIN`
+  and `ACCESS_AUD` are unset; no Cloudflare Access application exists; and migration `0003`
+  (indexes) is applied locally but **not** to the remote D1 — run `npm run db:migrate:remote`
+  before or at deploy. The dev-only admin bypass (`.dev.vars` `DEV_ADMIN_SECRET`) is
   force-disabled once `ACCESS_AUD` is set.
-- **Next: the frontend phase (F-M0 → F-M4, PRD §18)** — do not start until the owner confirms.
-  Never import `src/lib/answerKey.ts` from anything under `web/`.
+- **Next: F-M3a** — the leads dashboard, per
+  `docs/superpowers/specs/2026-09-10-forge-admin-dashboard-design.md` §5. Then F-M3b
+  (insights), then F-M4c (deploy + lock `/admin`).
+  Never import `src/lib/answerKey.ts` from anything under `web/` — `web/test/answer-key-boundary.test.ts`
+  fails the build if you do.

@@ -41,7 +41,16 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * Not indexable, so this is a scan; acceptable at this scale and only ever run when the
  * search query actually contains digits.
  */
-const WHATSAPP_DIGITS = sql`replace(replace(replace(replace(replace(replace(${diagnostics.whatsapp}, ' ', ''), '-', ''), '+', ''), '(', ''), ')', ''), '.', '')`;
+const WHATSAPP_DIGITS = sql`replace(replace(replace(replace(replace(replace(replace(replace(replace(${diagnostics.whatsapp}, ' ', ''), '-', ''), '+', ''), '(', ''), ')', ''), '.', ''), '/', ''), ',', ''), char(160), '')`;
+
+/**
+ * `%` and `_` are LIKE wildcards. Without escaping, searching "%" matches every lead and
+ * "a_c" matches "abc" — silently wrong results in the founder's search box. Escape them
+ * (and the escape character itself) and pair with an explicit ESCAPE clause below.
+ */
+function escapeLike(s: string): string {
+	return s.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
 
 /**
  * Did this lead tap the WhatsApp CTA? A correlated EXISTS keeps the list at one COUNT +
@@ -124,9 +133,10 @@ admin.get('/leads', async (c) => {
 
 	if (q.q !== undefined && q.q.trim() !== '') {
 		const term = q.q.trim();
-		const nameMatch = like(diagnostics.first_name, `%${term}%`);
+		const nameMatch = sql`${diagnostics.first_name} LIKE ${`%${escapeLike(term)}%`} ESCAPE '\\'`;
 		// Only search numbers when the query really looks like one: 1–2 digits would
-		// match almost every lead and make the search useless.
+		// match almost every lead and make the search useless. `digits` is \D-stripped,
+		// so it can never carry a LIKE wildcard and needs no escaping.
 		const digits = term.replace(/\D/g, '');
 		if (digits.length >= 3) {
 			conds.push(or(nameMatch, sql`${WHATSAPP_DIGITS} LIKE ${`%${digits}%`}`) as SQL);
@@ -243,30 +253,37 @@ admin.get('/analytics', async (c) => {
 	try {
 		const db = getDb(c.env);
 
-		// Distinct sessions per event type (one aggregate query).
-		const byType = await db
-			.select({ type: eventsTable.type, sessions: countDistinct(eventsTable.session_id) })
-			.from(eventsTable)
-			.groupBy(eventsTable.type);
+		// Six independent read-only aggregates — none depends on another's result, so they
+		// are issued together and the round trips overlap instead of adding up (B8 review).
+		const [byType, funnelRows, statusRows, outcomeRows, archetypeRows, programRows] = await Promise.all([
+			// Distinct sessions per event type.
+			db.select({ type: eventsTable.type, sessions: countDistinct(eventsTable.session_id) }).from(eventsTable).groupBy(eventsTable.type),
+			// Per-question drop-off: distinct sessions that reached each question (advance events).
+			db
+				.select({ question_index: eventsTable.question_index, count: countDistinct(eventsTable.session_id) })
+				.from(eventsTable)
+				.where(eq(eventsTable.type, 'advance'))
+				.groupBy(eventsTable.question_index)
+				.orderBy(eventsTable.question_index),
+			// Status mix + total leads.
+			db.select({ status: diagnostics.lead_status, n: count() }).from(diagnostics).groupBy(diagnostics.lead_status),
+			// Enrolments (from the outcome field).
+			db.select({ outcome: diagnostics.outcome, n: count() }).from(diagnostics).groupBy(diagnostics.outcome),
+			// Audience mix (B8): who the diagnostic is attracting. Plain COUNT/GROUP BY (F7.2).
+			db.select({ k: diagnostics.archetype, n: count() }).from(diagnostics).groupBy(diagnostics.archetype),
+			db.select({ k: diagnostics.recommended_program, n: count() }).from(diagnostics).groupBy(diagnostics.recommended_program),
+		]);
+
 		const evt: Record<string, number> = {};
 		for (const r of byType) evt[r.type] = r.sessions;
 		const started = evt.start ?? 0;
 		const completed = evt.completed ?? 0;
 		const whatsapp_clicked = evt.whatsapp_clicked ?? 0;
 
-		// Per-question drop-off: distinct sessions that reached each question (advance events).
-		const funnelRows = await db
-			.select({ question_index: eventsTable.question_index, count: countDistinct(eventsTable.session_id) })
-			.from(eventsTable)
-			.where(eq(eventsTable.type, 'advance'))
-			.groupBy(eventsTable.question_index)
-			.orderBy(eventsTable.question_index);
 		const funnel_by_question = funnelRows
 			.filter((r) => r.question_index !== null)
 			.map((r) => ({ question_index: r.question_index as number, count: r.count }));
 
-		// Status mix + total leads (from the diagnostics table).
-		const statusRows = await db.select({ status: diagnostics.lead_status, n: count() }).from(diagnostics).groupBy(diagnostics.lead_status);
 		const status_mix = { HOT: 0, WARM: 0, COLD: 0 };
 		let totalLeads = 0;
 		for (const r of statusRows) {
@@ -274,17 +291,12 @@ admin.get('/analytics', async (c) => {
 			totalLeads += r.n;
 		}
 
-		// Enrolments (from the outcome field).
-		const outcomeRows = await db.select({ outcome: diagnostics.outcome, n: count() }).from(diagnostics).groupBy(diagnostics.outcome);
 		let enrolled = 0;
 		for (const r of outcomeRows) if (r.outcome?.startsWith('Enrolled')) enrolled += r.n;
 
-		// Audience mix (B8): who the diagnostic is attracting. Plain COUNT/GROUP BY (F7.2).
-		const archetypeRows = await db.select({ k: diagnostics.archetype, n: count() }).from(diagnostics).groupBy(diagnostics.archetype);
 		const archetype_mix: Record<string, number> = {};
 		for (const r of archetypeRows) archetype_mix[r.k] = r.n;
 
-		const programRows = await db.select({ k: diagnostics.recommended_program, n: count() }).from(diagnostics).groupBy(diagnostics.recommended_program);
 		const program_mix: Record<string, number> = {};
 		for (const r of programRows) program_mix[r.k] = r.n;
 

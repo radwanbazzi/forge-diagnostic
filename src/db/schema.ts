@@ -109,8 +109,10 @@ export const events = sqliteTable('events', {
 }, (t) => [
 	// B8: makes the leads list's whatsapp_clicked EXISTS subquery a point lookup.
 	index('idx_events_session_type').on(t.session_id, t.type),
-	// B8: serves the analytics funnel's GROUP BY question_index.
-	index('idx_events_type_question').on(t.type, t.question_index),
+	// B8: serves the analytics funnel's GROUP BY question_index. session_id is included so
+	// COUNT(DISTINCT session_id) is answered from the index without touching the table —
+	// advance rows are the bulk of this table (~17 per session).
+	index('idx_events_type_question').on(t.type, t.question_index, t.session_id),
 ]);
 
 export type Diagnostic = typeof diagnostics.$inferSelect;
