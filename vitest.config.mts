@@ -19,7 +19,6 @@ export default defineConfig({
 						ADMIN_EMAIL: 'founder@example.com',
 						DEV_ADMIN_SECRET: 'local-dev-secret-change-me',
 						WHATSAPP_NUMBER: '9610000000',
-						WHISH_LINK: 'https://whish.money/pay/test',
 					},
 				},
 			};

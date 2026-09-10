@@ -311,6 +311,29 @@ Answer key + point values, band mapping, prior-score override, archetype precede
 - **Tests:** full §1 failure matrix + PRD §17 backend criteria.
 - **DoD:** all failure cases pass; `ci.yml` green; ready for the frontend phase.
 
+### B8 — Admin foundations (analytics instrumentation + leads-list capabilities)
+- **Goal:** make the drop-off funnel possible and give the leads list the three
+  capabilities the admin dashboard needs.
+- **Files:** `web/src/lib/api.ts`, `web/src/components/DiagnosticFlow.tsx`,
+  `src/routes/admin.ts`, `src/db/schema.ts`, a generated index migration,
+  `test/admin.test.ts`, `test/analytics.test.ts`, `web/test/*`.
+- **Scope:**
+  - `postEvent` carries an optional `question_index`; `DiagnosticFlow` fires `start`,
+    `advance` (1-based question number, Q1–Q17) and `contact_reached`. Only `completed`
+    and `whatsapp_clicked` were previously wired up, so `funnel_by_question` was always
+    `[]` and `started` always 0.
+  - `GET /api/admin/leads`: `q` matches the normalised phone number as well as
+    `first_name`; new `result_sent=0|1` and `engaged=0|1` filters; new
+    `whatsapp_clicked: 0|1` column via a correlated EXISTS.
+  - `GET /api/admin/analytics`: adds `archetype_mix` and `program_mix`.
+  - Indexes: `events(session_id, type)`, `events(type, question_index)`,
+    `diagnostics(created_at)`.
+- **Tests:** phone search across stored formats; short queries do not match phones;
+  both filters and their `400 invalid_filter` paths; `whatsapp_clicked` correctness;
+  mixes sum to the lead total; the three events fire exactly once each.
+- **DoD:** full Vitest suite green (Worker + web); typecheck clean; the leads handler is
+  still one COUNT + one paged SELECT; the answer-key boundary guard passes.
+
 ---
 
 ## 7. Working Rules for the Implementer (Claude Code)

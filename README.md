@@ -36,7 +36,7 @@ npm run typecheck    # TypeScript, no emit
 | GET | `/api/health` | none | Health check |
 | POST | `/api/diagnostic/submit` | none | Score a submission, save a lead, return the result |
 | POST | `/api/event` | none | Fire-and-forget analytics beacon |
-| GET | `/api/admin/leads` | admin | List leads (filter/search/page) |
+| GET | `/api/admin/leads` | admin | List leads (filter by status/program/date/sent/engaged, search by name **or phone**, page) |
 | GET | `/api/admin/leads/:id` | admin | One lead + result + WhatsApp message |
 | PATCH | `/api/admin/leads/:id` | admin | Update manual tracking fields |
 | GET | `/api/admin/analytics` | admin | Funnel metrics |

@@ -402,8 +402,19 @@ The authoritative, incremental build plan is the **backend milestones B0-B7 in `
 - **F-M0** — Astro project in `web/`, Forge tokens/fonts, static SEO landing page (headline/subhead/benefits/Start), served by the Worker.
 - **F-M1** — Diagnostic flow (React island): 22 questions, 4 sections, one-per-screen mobile, progress bar, validation, contact+consent gate. Answers assembled client-side.
 - **F-M2** — Wire the flow to `POST /api/diagnostic/submit`; render the returned result payload (Score Gauge motif, all §8 blocks, WhatsApp CTA).
-- **F-M3** — Admin dashboard (React island behind Cloudflare Access): leads table, filters/search, lead detail, editable manual fields, copy-WhatsApp-message, analytics view.
-- **F-M4** — Polish: accessibility pass, privacy page, seed env vars (WhatsApp number), full §17 acceptance run, deploy to production.
+- **B8** — Admin foundations (backend): analytics instrumentation fix (`start` / `advance` /
+  `contact_reached` were never fired, so the funnel had no data), leads-list phone search,
+  `result_sent` + `engaged` filters, `whatsapp_clicked` column, archetype/programme mix,
+  index migration. See `BACKEND_SPEC.md` §6 B8.
+- **F-M3a** — Leads dashboard (React island behind Cloudflare Access): always-on search by
+  name or number, a "to send" sweep queue, lead detail with the pre-filled one-tap WhatsApp
+  action, mark-as-sent, and auto-saving manual fields.
+- **F-M3b** — Insights screen: where students quit (17 question bars + the contact gate),
+  who finished but never tapped WhatsApp, and a brief audience mix.
+- **F-M4** — Polish: accessibility pass, privacy page, seed env vars (WhatsApp number),
+  full §17 acceptance run.
+- **F-M4c** — Deploy to production and lock `/admin` + `/api/admin/*` with a Cloudflare
+  Access application allowing only the founder's email.
 
 *(The old Next.js M0-M7 milestone list from v1 is retired; it referenced Vercel/Supabase/Tailwind and no longer applies.)*
 
