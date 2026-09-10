@@ -7,7 +7,7 @@
  * no native enum / CHECK is not added); the listed values are the exact strings
  * the scoring engine will produce (PRD §7–§8).
  */
-import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 /** One row per completed diagnostic = one auto-scored lead. */
 export const diagnostics = sqliteTable('diagnostics', {
@@ -91,7 +91,10 @@ export const diagnostics = sqliteTable('diagnostics', {
 		.notNull()
 		.default('-'),
 	notes: text('notes'), // nullable
-});
+}, (t) => [
+	// The list endpoint always pages newest-first (B8).
+	index('idx_diagnostics_created_at').on(t.created_at),
+]);
 
 /** Lightweight analytics events (PRD §11 / BACKEND_SPEC §3). */
 export const events = sqliteTable('events', {
@@ -103,7 +106,12 @@ export const events = sqliteTable('events', {
 	type: text('type', { enum: ['start', 'advance', 'contact_reached', 'completed', 'whatsapp_clicked'] }).notNull(),
 	question_index: integer('question_index'), // nullable (set for 'advance')
 	meta: text('meta'), // nullable JSON string
-});
+}, (t) => [
+	// B8: makes the leads list's whatsapp_clicked EXISTS subquery a point lookup.
+	index('idx_events_session_type').on(t.session_id, t.type),
+	// B8: serves the analytics funnel's GROUP BY question_index.
+	index('idx_events_type_question').on(t.type, t.question_index),
+]);
 
 export type Diagnostic = typeof diagnostics.$inferSelect;
 export type NewDiagnostic = typeof diagnostics.$inferInsert;

@@ -22,6 +22,13 @@
       "when": 1788260761275,
       "tag": "0002_nappy_prima",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789065670454,
+      "tag": "0003_broken_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }
