@@ -17,7 +17,7 @@
  * ── PATCH /api/admin/leads/:id ─ (B5) · GET /api/admin/analytics ─ (B6): stubs, behind auth.
  */
 import { Hono } from 'hono';
-import { and, count, countDistinct, desc, eq, gte, like, lte, type SQL } from 'drizzle-orm';
+import { and, count, countDistinct, desc, eq, gte, like, lte, or, sql, type SQL } from 'drizzle-orm';
 import type { HonoEnv } from '../types';
 import { getDb } from '../db/client';
 import { diagnostics, events as eventsTable } from '../db/schema';
@@ -34,6 +34,14 @@ admin.use('*', requireAdmin());
 const LEAD_STATUSES = ['HOT', 'WARM', 'COLD'] as const;
 const PROGRAMS = ['$80 SAT Essentials', '$130 SAT Accelerator'] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The stored `whatsapp` is free text — students type "+961 70 123 456", "03-123-456",
+ * "70123456". Strip the punctuation in SQL so a digits-only query matches any format.
+ * Not indexable, so this is a scan; acceptable at this scale and only ever run when the
+ * search query actually contains digits.
+ */
+const WHATSAPP_DIGITS = sql`replace(replace(replace(replace(replace(replace(${diagnostics.whatsapp}, ' ', ''), '-', ''), '+', ''), '(', ''), ')', ''), '.', '')`;
 
 /** Lean list projection (PRD §9 columns + a few), never the heavy result_payload/answers. */
 const LIST_COLUMNS = {
@@ -88,7 +96,16 @@ admin.get('/leads', async (c) => {
 	}
 
 	if (q.q !== undefined && q.q.trim() !== '') {
-		conds.push(like(diagnostics.first_name, `%${q.q.trim()}%`));
+		const term = q.q.trim();
+		const nameMatch = like(diagnostics.first_name, `%${term}%`);
+		// Only search numbers when the query really looks like one: 1–2 digits would
+		// match almost every lead and make the search useless.
+		const digits = term.replace(/\D/g, '');
+		if (digits.length >= 3) {
+			conds.push(or(nameMatch, sql`${WHATSAPP_DIGITS} LIKE ${`%${digits}%`}`) as SQL);
+		} else {
+			conds.push(nameMatch);
+		}
 	}
 
 	let limit = 50;

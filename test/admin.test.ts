@@ -170,3 +170,57 @@ describe('GET /api/admin/leads/:id — detail (US-4)', () => {
 		expect((await SELF.fetch(`https://x/api/admin/leads/${crypto.randomUUID()}`, { headers: auth })).status).toBe(404);
 	});
 });
+
+describe('GET /api/admin/leads — search by phone as well as name (B8)', () => {
+	// Students type their number however they like; search must find them regardless.
+	const NUMBERS = [
+		{ first_name: 'Spaced', whatsapp: '+961 70 123 456' },
+		{ first_name: 'Dashed', whatsapp: '03-123-456' },
+		{ first_name: 'Bare', whatsapp: '70999888' },
+		{ first_name: 'Parens', whatsapp: '(961) 70.111.222' },
+	];
+
+	async function names(query: string): Promise<string[]> {
+		const res = await SELF.fetch(`https://x/api/admin/leads?q=${encodeURIComponent(query)}`, { headers: auth });
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as { leads: Array<{ first_name: string }> };
+		return body.leads.map((l) => l.first_name).sort();
+	}
+
+	it('finds a lead by digits regardless of how the number was typed', async () => {
+		await seed(NUMBERS);
+		expect(await names('70123456')).toEqual(['Spaced']);
+		expect(await names('03123456')).toEqual(['Dashed']);
+		expect(await names('70999888')).toEqual(['Bare']);
+		expect(await names('70111222')).toEqual(['Parens']);
+	});
+
+	it('finds a lead by a partial number', async () => {
+		await seed(NUMBERS);
+		expect(await names('123456')).toEqual(['Dashed', 'Spaced']);
+	});
+
+	it('still finds a lead by name', async () => {
+		await seed([
+			{ first_name: 'Lina', whatsapp: '+961 70 555 000' },
+			{ first_name: 'Karim', whatsapp: '+961 71 555 111' },
+		]);
+		expect(await names('Lin')).toEqual(['Lina']);
+	});
+
+	it('a short or alphabetic query does not trigger phone matching', async () => {
+		// '12' has only two digits — must not scan phone numbers, or every lead matches.
+		await seed([{ first_name: 'Ada', whatsapp: '+961 70 121 212' }]);
+		expect(await names('12')).toEqual([]);
+	});
+
+	it('an empty result is still 200 with an empty list', async () => {
+		await seed(NUMBERS);
+		expect(await names('99999999')).toEqual([]);
+	});
+
+	it('is still 401 without credentials', async () => {
+		const res = await SELF.fetch('https://x/api/admin/leads?q=70123456');
+		expect(res.status).toBe(401);
+	});
+});
