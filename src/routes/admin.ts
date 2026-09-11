@@ -14,7 +14,14 @@
  * 200 full row + parsed result_payload + assembled whatsapp_message (PRD §10).
  * Failures: 404 (F4.1) · 400 malformed id (F4.2) · 401 (F4.3)
  *
- * ── PATCH /api/admin/leads/:id ─ (B5) · GET /api/admin/analytics ─ (B6): stubs, behind auth.
+ * ── PATCH /api/admin/leads/:id ──────────────────────────────  (B5)
+ * Writes ONLY the four manual tracking fields (whitelist in lib/validation.ts).
+ * Failures: 400 unknown/invalid field (F5.1/F5.2) · 404 (F5.3) · 401
+ *
+ * ── GET /api/admin/analytics ────────────────────────────────  (B6 · B8 · F-M3b)
+ * 200 { started, completed, contact_reached, completion_rate, funnel_by_question,
+ *       status_mix, archetype_mix, program_mix, whatsapp_click_rate, enrollment_rate, totals }.
+ * Simple COUNT/GROUP BY only (F7.2). Failures: 401 · 500
  */
 import { Hono } from 'hono';
 import { and, count, countDistinct, desc, eq, gte, like, lte, or, sql, type SQL } from 'drizzle-orm';
@@ -278,6 +285,10 @@ admin.get('/analytics', async (c) => {
 		for (const r of byType) evt[r.type] = r.sessions;
 		const started = evt.start ?? 0;
 		const completed = evt.completed ?? 0;
+		// The contact gate (F-M3b): distinct sessions that reached the section-4 contact screen.
+		// started − contact_reached is "quit during the questions"; contact_reached − completed is
+		// "quit when asked for a phone number" — two different problems with two different fixes.
+		const contact_reached = evt.contact_reached ?? 0;
 		const whatsapp_clicked = evt.whatsapp_clicked ?? 0;
 
 		const funnel_by_question = funnelRows
@@ -303,6 +314,7 @@ admin.get('/analytics', async (c) => {
 		return c.json({
 			started,
 			completed,
+			contact_reached,
 			completion_rate: pct(completed, started),
 			funnel_by_question,
 			status_mix,

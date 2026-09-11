@@ -90,9 +90,14 @@ npm run db:migrate:remote   # apply migrations to the REMOTE/prod D1 (needs real
   (indexes) is applied locally but **not** to the remote D1 — run `npm run db:migrate:remote`
   before or at deploy. The dev-only admin bypass (`.dev.vars` `DEV_ADMIN_SECRET`) is
   force-disabled once `ACCESS_AUD` is set.
-- **Next: F-M3b** — the insights/funnel screen, per
-  `docs/superpowers/specs/2026-09-10-forge-admin-dashboard-design.md` §6. Then F-M4c
-  (deploy + lock `/admin`). The dashboard already shows an inert "Insights — next" tab
-  where that screen slots in.
+- **F-M3b (insights screen): done.** The `/admin` Insights tab is live
+  (`admin/Insights.tsx` → `admin/Funnel.tsx` + `admin/WentQuiet.tsx` + `admin/AudienceMix.tsx`,
+  with the ladder maths in `web/src/lib/funnel.ts`). Drop-off funnel labelled with real
+  question text, the questions-vs-contact-gate boundary drawn explicitly, a "finished but
+  went quiet" list (`engaged=0`), and the audience mix. `GET /api/admin/analytics` gained
+  `contact_reached` (no new query — it was already in the by-type aggregate) to feed the
+  contact-gate bar. `scripts/dev-seed.sql` fills the LOCAL D1 with demo traffic;
+  `scripts/dev-seed-clear.sql` removes only what it wrote.
+- **Next: F-M4c** — deploy + lock `/admin` behind Cloudflare Access.
   Never import `src/lib/answerKey.ts` from anything under `web/` — `web/test/answer-key-boundary.test.ts`
   fails the build if you do.

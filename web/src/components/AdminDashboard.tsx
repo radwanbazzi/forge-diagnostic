@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import LeadsList, { type EmptyKind } from './admin/LeadsList';
 import LeadDetail from './admin/LeadDetail';
+import Insights from './admin/Insights';
 import {
 	AdminApiError,
 	clearDevAuth,
@@ -32,7 +33,7 @@ import {
 } from '../lib/adminApi';
 import './admin.css';
 
-type Tab = 'to-send' | 'all';
+type Tab = 'to-send' | 'all' | 'insights';
 
 const SEARCH_DEBOUNCE_MS = 250;
 /** One page deep enough that the sweep almost never needs to page (server max is 200). */
@@ -62,6 +63,8 @@ export default function AdminDashboard() {
 	/** The unfiltered size of the sweep queue — the badge, deliberately ignoring the search. */
 	const [toSendCount, setToSendCount] = useState<number | null>(null);
 	const [reloadKey, setReloadKey] = useState(0);
+	/** The most recent successful save, handed to Insights so its rows update in place. */
+	const [lastChanged, setLastChanged] = useState<LeadPatchResponse | null>(null);
 
 	const [devAuth, setDevAuthState] = useState(() => getDevAuth());
 	const devHost = isLocalDevHost();
@@ -82,7 +85,7 @@ export default function AdminDashboard() {
 	// The list. Aborts in flight when the query changes, so a fast typist never sees an
 	// older response land after a newer one.
 	useEffect(() => {
-		if (unauthorized) return;
+		if (unauthorized || tab === 'insights') return;
 		const ac = new AbortController();
 		setLoading(true);
 		setListError(null);
@@ -105,7 +108,7 @@ export default function AdminDashboard() {
 			});
 
 		return () => ac.abort();
-	}, [query, reloadKey, unauthorized, onUnauthorized]);
+	}, [query, reloadKey, unauthorized, onUnauthorized, tab]);
 
 	// The badge: a separate 1-row query so the number is the true size of the queue, not
 	// whatever the current search happens to show.
@@ -136,6 +139,7 @@ export default function AdminDashboard() {
 						: r,
 				),
 			);
+			setLastChanged(updated);
 			refreshBadge();
 		},
 		[refreshBadge],
@@ -213,7 +217,11 @@ export default function AdminDashboard() {
 						className="ad-search-input"
 						placeholder="Search a name or phone number…"
 						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(e) => {
+						setSearch(e.target.value);
+						// Searching from Insights means "find me this person" — switch to the tab that shows them.
+						if (e.target.value.trim() && tab === 'insights') setTab('all');
+					}}
 						autoComplete="off"
 					/>
 					{search ? (
@@ -247,9 +255,16 @@ export default function AdminDashboard() {
 					>
 						All leads
 					</button>
-					{/* F-M3b. Shown but inert so the shape of the finished screen is visible. */}
-					<button type="button" className="ad-tab is-todo" disabled aria-disabled="true" title="Coming in the next milestone">
-						Insights <span className="ad-soon">next</span>
+					<button
+						type="button"
+						className={`ad-tab${tab === 'insights' ? ' is-active' : ''}`}
+						aria-current={tab === 'insights' ? 'page' : undefined}
+						onClick={() => {
+							setTab('insights');
+							setSelectedId(null);
+						}}
+					>
+						Insights
 					</button>
 					<button
 						type="button"
@@ -266,15 +281,24 @@ export default function AdminDashboard() {
 
 			<div className="ad-body">
 				<div className="ad-list-pane">
-					<LeadsList
-						leads={leads}
-						loading={loading}
-						error={listError}
-						selectedId={selectedId}
-						onSelect={(lead) => setSelectedId(lead.id)}
-						emptyKind={emptyKind}
-						total={total}
-					/>
+					{tab === 'insights' ? (
+						<Insights
+							onSelectLead={(lead) => setSelectedId(lead.id)}
+							onUnauthorized={onUnauthorized}
+							reloadKey={reloadKey}
+							lastChanged={lastChanged}
+						/>
+					) : (
+						<LeadsList
+							leads={leads}
+							loading={loading}
+							error={listError}
+							selectedId={selectedId}
+							onSelect={(lead) => setSelectedId(lead.id)}
+							emptyKind={emptyKind}
+							total={total}
+						/>
+					)}
 				</div>
 
 				{selectedId ? (

@@ -195,6 +195,36 @@ export interface LeadPatch {
 	notes?: string | null;
 }
 
+/**
+ * GET /api/admin/analytics (B6 · B8 · F-M3b). A mirror of the Worker's response.
+ *
+ * Counts are DISTINCT SESSIONS, not rows: one student who answers Q5 twice counts once.
+ * `funnel_by_question` carries only the question numbers that have at least one event,
+ * so it is sparse — buildFunnel() in ./funnel expands it into the full ladder.
+ */
+export interface Analytics {
+	/** Distinct sessions that fired 'start' (opened the quiz). */
+	started: number;
+	/** Distinct sessions that fired 'completed' (saw their result). */
+	completed: number;
+	/** Distinct sessions that reached the section-4 contact screen — the contact gate. */
+	contact_reached: number;
+	/** completed / started, 0..1, rounded to 4dp server-side. */
+	completion_rate: number;
+	/** Sparse: one entry per question number that has at least one 'advance' event. */
+	funnel_by_question: Array<{ question_index: number; count: number }>;
+	status_mix: Record<LeadStatus, number>;
+	/** Lead counts keyed by archetype; absent keys mean zero. */
+	archetype_mix: Record<string, number>;
+	/** Lead counts keyed by recommended programme; absent keys mean zero. */
+	program_mix: Record<string, number>;
+	/** whatsapp_clicked / completed, 0..1. */
+	whatsapp_click_rate: number;
+	/** enrolled / total leads, 0..1. */
+	enrollment_rate: number;
+	totals: { leads: number; enrolled: number; whatsapp_clicked: number };
+}
+
 export interface LeadQuery {
 	q?: string;
 	status?: LeadStatus;
@@ -286,6 +316,11 @@ export function patchLead(id: string, patch: LeadPatch): Promise<LeadPatchRespon
 		headers: { 'content-type': 'application/json' },
 		body: JSON.stringify(body),
 	});
+}
+
+/** The insights screen's single aggregate read (F-M3b). Six COUNT/GROUP BY queries server-side. */
+export function getAnalytics(signal?: AbortSignal): Promise<Analytics> {
+	return request<Analytics>('/api/admin/analytics', { signal });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

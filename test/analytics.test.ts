@@ -64,6 +64,8 @@ describe('GET /api/admin/analytics (US-7)', () => {
 
 		expect(d.started).toBe(3);
 		expect(d.completed).toBe(2);
+		// The contact gate (F-M3b): s1 and s3 reached it, s2 quit inside the questions.
+		expect(d.contact_reached).toBe(2);
 		expect(d.completion_rate).toBe(0.6667); // 2/3
 		expect(d.funnel_by_question).toEqual([
 			{ question_index: 5, count: 3 },
@@ -80,6 +82,7 @@ describe('GET /api/admin/analytics (US-7)', () => {
 		expect(res.status).toBe(200);
 		const d = (await res.json()) as any;
 		expect(d.started).toBe(0);
+		expect(d.contact_reached).toBe(0);
 		expect(d.completion_rate).toBe(0);
 		expect(d.funnel_by_question).toEqual([]);
 		expect(d.status_mix).toEqual({ HOT: 0, WARM: 0, COLD: 0 });
