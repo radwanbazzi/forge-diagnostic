@@ -1,0 +1,65 @@
+---
+// F-M3a — the founder's leads dashboard. A static shell that mounts the React island;
+// it deliberately contains NO student data (design spec §7): every byte arrives from
+// /api/admin/*, which is gated by Cloudflare Access at the edge AND re-verified inside
+// the Worker. Worst case, someone loads this HTML and sees an empty frame whose every
+// request 401s.
+import AdminDashboard from '../components/AdminDashboard.tsx';
+
+const title = 'Forge leads — admin';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title}</title>
+		<!-- Never indexed, never followed: this is a private tool. -->
+		<meta name="robots" content="noindex,nofollow" />
+		<meta name="theme-color" content="#F2EFE6" />
+		<link rel="icon" href="/forge-icon.svg" type="image/svg+xml" />
+		<!-- Same self-hosted fonts as the student pages (F-M4a): no Google Fonts round-trip. -->
+		<link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href="/fonts/anton-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href="/fonts/ibm-plex-mono-500-latin.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="stylesheet" href="/fonts/forge-fonts.css" />
+		<style is:global>
+			:root {
+				--bone: #f2efe6;
+				--ink: #141310;
+				--molten: #d4331f;
+				--molten-dark: #a5290f;
+				--amber: #c9a227;
+				--grey: #8a857a;
+				--rule: #e3ddcf;
+				--ink-soft: #4a443b;
+				--card: #ffffff;
+				/* AA-compliant variants for SMALL coloured text on light backgrounds. */
+				--molten-text: #c22f16;
+				--grey-text: #6b665c;
+			}
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+			html {
+				-webkit-text-size-adjust: 100%;
+			}
+			body {
+				background: var(--bone);
+				color: var(--ink);
+				font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+				font-size: 16px;
+				line-height: 1.55;
+				-webkit-font-smoothing: antialiased;
+				text-rendering: optimizeLegibility;
+			}
+		</style>
+	</head>
+
+	<body>
+		<AdminDashboard client:load />
+	</body>
+</html>
