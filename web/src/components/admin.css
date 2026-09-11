@@ -1,0 +1,789 @@
+/* Forge admin dashboard — F-M3a. Brand tokens (--bone/--ink/--molten/…) come from
+   :root in admin.astro, same as the student pages. Mobile-first: cards on a phone,
+   a real table from 900px, and a two-pane sweep view from 1100px. */
+
+.mono {
+	font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Visually hidden, still announced. */
+.al-sr {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.ad-shell :focus-visible {
+	outline: 3px solid var(--molten);
+	outline-offset: 2px;
+	border-radius: 8px;
+}
+
+.ad-shell {
+	max-width: 1400px;
+	margin: 0 auto;
+	padding: 0 16px 56px;
+	min-height: 100dvh;
+}
+
+.ad-shell-gate {
+	max-width: 560px;
+	padding-top: 40px;
+}
+
+/* ── Header: title, search (always visible), tabs ─────────────────────────── */
+.ad-header {
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	background: var(--bone);
+	padding: 14px 0 10px;
+	border-bottom: 1px solid var(--rule);
+}
+
+.ad-header-top {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.ad-title {
+	font-family: Anton, Impact, 'Arial Narrow Bold', sans-serif;
+	font-weight: 400;
+	font-size: 27px;
+	letter-spacing: 0.01em;
+	text-transform: uppercase;
+}
+
+.ad-devbadge {
+	font-size: 12px;
+	color: var(--grey-text);
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.ad-search {
+	position: relative;
+	margin-top: 10px;
+}
+
+.ad-search-input {
+	width: 100%;
+	font: inherit;
+	font-size: 17px; /* >=16px so iOS does not zoom on focus */
+	padding: 12px 40px 12px 14px;
+	border: 1.5px solid var(--rule);
+	border-radius: 10px;
+	background: var(--card);
+	color: var(--ink);
+	-webkit-appearance: none;
+	appearance: none;
+}
+.ad-search-input:focus {
+	border-color: var(--molten);
+	outline: none;
+}
+.ad-search-input::placeholder {
+	color: var(--grey-text);
+}
+
+.ad-search-clear {
+	position: absolute;
+	right: 6px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 34px;
+	height: 34px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--grey-text);
+	font-size: 22px;
+	line-height: 1;
+	cursor: pointer;
+}
+.ad-search-clear:hover {
+	color: var(--ink);
+}
+
+.ad-tabs {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 10px;
+	flex-wrap: wrap;
+}
+
+.ad-tab {
+	font: inherit;
+	font-size: 15px;
+	font-weight: 600;
+	padding: 8px 13px;
+	min-height: 40px;
+	border: 1.5px solid var(--rule);
+	border-radius: 999px;
+	background: var(--card);
+	color: var(--ink-soft);
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+}
+.ad-tab:hover:not(:disabled) {
+	border-color: var(--grey);
+}
+.ad-tab.is-active {
+	background: var(--ink);
+	border-color: var(--ink);
+	color: var(--bone);
+}
+.ad-tab.is-todo {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.ad-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 6px;
+	border-radius: 999px;
+	background: var(--molten);
+	color: #fff;
+	font-size: 12px;
+	font-weight: 500;
+}
+.ad-tab.is-active .ad-badge {
+	background: var(--bone);
+	color: var(--ink);
+}
+
+.ad-soon {
+	font-size: 10px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--grey-text);
+}
+
+.ad-refresh {
+	margin-left: auto;
+	font: inherit;
+	font-size: 14px;
+	padding: 8px 12px;
+	min-height: 40px;
+	border: 1.5px solid var(--rule);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--ink-soft);
+	cursor: pointer;
+}
+.ad-refresh:hover {
+	border-color: var(--grey);
+}
+
+/* ── Body layout ──────────────────────────────────────────────────────────── */
+.ad-body {
+	padding-top: 14px;
+}
+
+/* ── Status pills + signal tags ───────────────────────────────────────────── */
+.al-pill {
+	display: inline-block;
+	padding: 3px 9px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	color: #fff;
+}
+.al-pill-hot {
+	background: var(--molten);
+}
+.al-pill-warm {
+	background: var(--amber);
+	color: var(--ink);
+}
+.al-pill-cold {
+	background: var(--grey);
+}
+
+.al-tag {
+	display: inline-block;
+	padding: 3px 8px;
+	border-radius: 6px;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+	white-space: nowrap;
+}
+.al-tag-tapped {
+	background: rgba(212, 51, 31, 0.12);
+	color: var(--molten-text);
+	border: 1px solid rgba(212, 51, 31, 0.3);
+}
+.al-tag-sent {
+	background: transparent;
+	color: var(--grey-text);
+	border: 1px solid var(--rule);
+}
+.al-tag-todo {
+	background: var(--ink);
+	color: var(--bone);
+}
+
+/* ── Empty / loading / error states ───────────────────────────────────────── */
+.al-state {
+	background: var(--card);
+	border: 1px solid var(--rule);
+	border-radius: 12px;
+	padding: 28px 22px;
+	text-align: center;
+}
+.al-state-title {
+	font-size: 18px;
+	font-weight: 700;
+	margin-bottom: 6px;
+}
+.al-state-body {
+	color: var(--ink-soft);
+	max-width: 46ch;
+	margin: 0 auto;
+}
+.al-state-error {
+	border-color: var(--molten);
+}
+.al-state .ad-btn {
+	margin-top: 16px;
+}
+
+.al-list.is-refreshing {
+	opacity: 0.62;
+	transition: opacity 0.12s ease;
+}
+
+.al-more {
+	margin-top: 12px;
+	font-size: 13px;
+	color: var(--grey-text);
+	text-align: center;
+}
+
+/* ── The queue: cards on a phone ──────────────────────────────────────────── */
+.al-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.al-name {
+	font: inherit;
+	font-size: 17px;
+	font-weight: 700;
+	color: var(--ink);
+	background: none;
+	border: 0;
+	padding: 0;
+	text-align: left;
+	cursor: pointer;
+}
+.al-name:hover {
+	color: var(--molten-text);
+}
+
+.al-tick {
+	color: var(--grey);
+	margin-right: 6px;
+	font-weight: 400;
+}
+
+.al-when,
+.al-archetype {
+	color: var(--ink-soft);
+}
+
+.al-signals {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+/* Already sent: recedes, but stays legible and clickable. */
+.al-row.is-sent {
+	opacity: 0.58;
+}
+.al-row.is-sent:hover,
+.al-row.is-selected {
+	opacity: 1;
+}
+
+@media (max-width: 899px) {
+	.al-table thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+	}
+	.al-table,
+	.al-table tbody,
+	.al-table tr,
+	.al-table td {
+		display: block;
+	}
+	.al-row {
+		background: var(--card);
+		border: 1px solid var(--rule);
+		border-radius: 12px;
+		padding: 13px 15px;
+		margin-bottom: 10px;
+		cursor: pointer;
+	}
+	.al-row.is-selected {
+		border-color: var(--molten);
+	}
+	.al-table td {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 14px;
+		padding: 3px 0;
+		font-size: 14px;
+	}
+	.al-table td::before {
+		content: attr(data-label);
+		font-size: 11px;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--grey-text);
+		flex: none;
+	}
+	/* The name is the card's headline, not a labelled field. */
+	.al-table td[data-label='Name'] {
+		display: block;
+		padding-bottom: 8px;
+	}
+	.al-table td[data-label='Name']::before {
+		content: none;
+	}
+	.al-signals {
+		justify-content: flex-end;
+	}
+}
+
+/* ── The queue: a real table at the desk ──────────────────────────────────── */
+@media (min-width: 900px) {
+	.al-table {
+		background: var(--card);
+		border: 1px solid var(--rule);
+		border-radius: 12px;
+		overflow: hidden;
+	}
+	.al-table th {
+		text-align: left;
+		font-size: 11px;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--grey-text);
+		font-weight: 600;
+		padding: 11px 14px;
+		border-bottom: 1px solid var(--rule);
+		white-space: nowrap;
+	}
+	.al-table td {
+		padding: 11px 14px;
+		border-bottom: 1px solid var(--rule);
+		font-size: 14px;
+		vertical-align: middle;
+	}
+	.al-table tr:last-child td {
+		border-bottom: 0;
+	}
+	.al-row {
+		cursor: pointer;
+	}
+	.al-row:hover {
+		background: rgba(20, 19, 16, 0.03);
+	}
+	.al-row.is-selected {
+		background: rgba(212, 51, 31, 0.07);
+		box-shadow: inset 3px 0 0 var(--molten);
+	}
+	.al-archetype {
+		font-size: 13px;
+	}
+}
+
+/* ── Two panes once there is room for both ────────────────────────────────── */
+@media (min-width: 1100px) {
+	.ad-body {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 18px;
+		align-items: start;
+	}
+	.ad-shell.is-detail-open .ad-body {
+		grid-template-columns: minmax(0, 1.15fr) minmax(380px, 0.85fr);
+	}
+	.ad-detail {
+		position: sticky;
+		top: 148px;
+		max-height: calc(100dvh - 168px);
+		overflow-y: auto;
+	}
+}
+
+/* Below that, opening a lead takes over the screen — a phone has room for one thing. */
+@media (max-width: 1099px) {
+	.ad-shell.is-detail-open .ad-list-pane {
+		display: none;
+	}
+}
+
+/* ── Lead detail ──────────────────────────────────────────────────────────── */
+.ad-detail {
+	background: var(--card);
+	border: 1px solid var(--rule);
+	border-radius: 12px;
+	padding: 16px 18px 22px;
+}
+
+.ad-detail-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.ad-save {
+	font-size: 13px;
+	color: var(--grey-text);
+	min-height: 1.2em;
+}
+.ad-save-saved {
+	color: var(--ink-soft);
+}
+.ad-save-error {
+	color: var(--molten-text);
+	font-weight: 600;
+	text-align: right;
+}
+
+.ad-name {
+	font-family: Anton, Impact, 'Arial Narrow Bold', sans-serif;
+	font-weight: 400;
+	font-size: 30px;
+	letter-spacing: 0.01em;
+	text-transform: uppercase;
+	line-height: 1.1;
+}
+
+.ad-identity-tags {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin: 9px 0 14px;
+}
+
+.ad-meta {
+	font-size: 13px;
+	color: var(--grey-text);
+}
+
+.ad-facts {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+	gap: 10px 16px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid var(--rule);
+}
+.ad-facts dt {
+	font-size: 11px;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--grey-text);
+	margin-bottom: 2px;
+}
+.ad-facts dd {
+	font-size: 15px;
+}
+.ad-facts-computed {
+	border-bottom: 0;
+	padding-bottom: 8px;
+}
+
+.ad-h3 {
+	font-size: 12px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--grey-text);
+	margin: 18px 0 9px;
+}
+
+/* The action block — the whole point of the screen. */
+.ad-message {
+	font-family: inherit;
+	font-size: 15px;
+	line-height: 1.5;
+	white-space: pre-wrap;
+	word-break: break-word;
+	background: var(--bone);
+	border: 1px solid var(--rule);
+	border-radius: 10px;
+	padding: 13px 15px;
+	color: var(--ink);
+}
+
+.ad-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 12px;
+	align-items: center;
+}
+
+.ad-btn {
+	font: inherit;
+	font-size: 15px;
+	font-weight: 600;
+	padding: 11px 16px;
+	min-height: 44px; /* comfortable tap target */
+	border: 1.5px solid var(--rule);
+	border-radius: 10px;
+	background: var(--card);
+	color: var(--ink);
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	text-decoration: none;
+}
+.ad-btn:hover:not(.is-disabled) {
+	border-color: var(--grey);
+}
+.ad-btn-primary {
+	background: var(--molten);
+	border-color: var(--molten);
+	color: #fff;
+}
+.ad-btn-primary:hover:not(.is-disabled) {
+	background: var(--molten-dark);
+	border-color: var(--molten-dark);
+}
+.ad-btn-mark {
+	background: var(--ink);
+	border-color: var(--ink);
+	color: var(--bone);
+}
+.ad-btn-quiet {
+	background: transparent;
+	font-weight: 500;
+}
+.ad-btn-next {
+	margin-left: auto;
+}
+.ad-btn.is-disabled,
+.ad-btn:disabled {
+	background: var(--grey);
+	border-color: var(--grey);
+	color: #fff;
+	cursor: not-allowed;
+	opacity: 0.75;
+}
+
+.ad-sent-state {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.ad-link {
+	font: inherit;
+	font-size: 13px;
+	background: none;
+	border: 0;
+	padding: 0;
+	color: var(--grey-text);
+	text-decoration: underline;
+	cursor: pointer;
+}
+.ad-link:hover {
+	color: var(--molten-text);
+}
+
+.ad-warn {
+	margin-top: 10px;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--ink-soft);
+	background: rgba(201, 162, 39, 0.13);
+	border-left: 3px solid var(--amber);
+	border-radius: 0 8px 8px 0;
+	padding: 9px 12px;
+}
+
+.ad-hint {
+	font-size: 13px;
+	color: var(--grey-text);
+	font-weight: 400;
+}
+
+/* Manual tracking fields. */
+.ad-field {
+	margin-bottom: 12px;
+}
+.ad-field label {
+	display: block;
+	font-size: 12px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--grey-text);
+	margin-bottom: 5px;
+	font-weight: 600;
+}
+.ad-field select,
+.ad-field textarea,
+.ad-field input {
+	width: 100%;
+	font: inherit;
+	font-size: 16px;
+	padding: 10px 12px;
+	min-height: 44px;
+	border: 1.5px solid var(--rule);
+	border-radius: 10px;
+	background: var(--card);
+	color: var(--ink);
+}
+.ad-field select:focus,
+.ad-field textarea:focus,
+.ad-field input:focus {
+	border-color: var(--molten);
+	outline: none;
+}
+.ad-field textarea {
+	resize: vertical;
+	line-height: 1.5;
+}
+.ad-field label .ad-hint {
+	text-transform: none;
+	letter-spacing: 0;
+	font-weight: 400;
+}
+
+/* Collapsed result + answers. */
+.ad-fold {
+	border-top: 1px solid var(--rule);
+	padding-top: 4px;
+	margin-top: 14px;
+}
+.ad-fold > summary {
+	cursor: pointer;
+	padding: 11px 2px;
+	font-size: 15px;
+	font-weight: 600;
+	list-style-position: inside;
+}
+.ad-fold > summary:hover {
+	color: var(--molten-text);
+}
+.ad-fold-body {
+	padding: 4px 2px 12px;
+}
+
+.ad-payload p {
+	margin-bottom: 9px;
+	color: var(--ink-soft);
+}
+.ad-payload-h {
+	font-size: 12px;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--grey-text);
+	margin-top: 12px;
+}
+.ad-payload ol {
+	padding-left: 20px;
+	color: var(--ink-soft);
+}
+.ad-payload li {
+	margin-bottom: 5px;
+}
+
+.ad-answers {
+	list-style: none;
+}
+.ad-answer {
+	padding: 10px 0;
+	border-bottom: 1px solid var(--rule);
+}
+.ad-answer:last-child {
+	border-bottom: 0;
+}
+.ad-answer-q {
+	font-size: 13px;
+	color: var(--grey-text);
+	line-height: 1.45;
+}
+.ad-answer-n {
+	font-weight: 500;
+	color: var(--ink-soft);
+	margin-right: 4px;
+}
+.ad-answer-a {
+	font-size: 15px;
+	margin-top: 3px;
+	display: flex;
+	gap: 10px;
+	align-items: baseline;
+	flex-wrap: wrap;
+}
+.ad-answer-time {
+	font-size: 12px;
+	color: var(--grey-text);
+}
+.ad-answer-time.is-timeout {
+	color: var(--molten-text);
+}
+
+/* ── Local-dev sign-in (localhost only — see adminApi.isLocalDevHost) ──────── */
+.ad-devsignin {
+	background: var(--card);
+	border: 2px dashed var(--amber);
+	border-radius: 12px;
+	padding: 20px;
+	margin-top: 20px;
+}
+.ad-devsignin-flag {
+	font-size: 11px;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	font-weight: 700;
+	color: var(--ink);
+	background: var(--amber);
+	display: inline-block;
+	padding: 4px 10px;
+	border-radius: 6px;
+	margin-bottom: 12px;
+}
+.ad-devsignin-body {
+	font-size: 14px;
+	color: var(--ink-soft);
+	margin-bottom: 16px;
+	line-height: 1.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.al-list.is-refreshing {
+		transition: none;
+	}
+}

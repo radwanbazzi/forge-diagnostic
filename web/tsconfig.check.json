@@ -1,0 +1,15 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"jsx": "react-jsx",
+		"jsxImportSource": "react",
+		"types": ["node"],
+		"lib": ["es2024", "dom", "dom.iterable"],
+		"module": "es2022",
+		"moduleResolution": "Bundler",
+		"allowImportingTsExtensions": true
+	},
+	"include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "test/**/*.tsx", "../src/lib/questions.ts"],
+	"exclude": ["dist", "node_modules", ".astro"]
+}

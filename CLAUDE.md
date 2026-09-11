@@ -72,9 +72,17 @@ npm run db:migrate:remote   # apply migrations to the REMOTE/prod D1 (needs real
   `contact_reached` were specified in PRD §11 but never fired, so the drop-off funnel had no
   data — and added leads-list phone search, `result_sent` + `engaged` filters, a
   `whatsapp_clicked` column, and the archetype/programme mix.
-- **Frontend F-M0 → F-M2, F-M4a, F-M4b, F-M-Timer: done.** Landing page, the 22-question
-  flow, live result screen, accessibility pass, self-hosted fonts, measured per-question
-  timing. Whish payment was removed from the product entirely (owner decision).
+- **Frontend F-M0 → F-M2, F-M3a, F-M4a, F-M4b, F-M-Timer: done.** Landing page, the
+  22-question flow, live result screen, accessibility pass, self-hosted fonts, measured
+  per-question timing, and the `/admin` leads dashboard. Whish payment was removed from the
+  product entirely (owner decision).
+- **F-M3a (leads dashboard): done.** `/admin` is a React island (`web/src/pages/admin.astro`
+  → `AdminDashboard.tsx` → `admin/LeadsList.tsx` + `admin/LeadDetail.tsx`). Search by name
+  or phone, a default "To send" queue with a count badge, the WhatsApp action block above
+  the collapsed result/answers, and auto-saving manual fields. Only the four whitelisted
+  fields are writable — `patchLead()` takes a `LeadPatch`, and its response is typed
+  `LeadPatchResponse` (no `whatsapp_message`) so it must be MERGED, never assigned.
+  `npm run typecheck` now also typechecks `web/` via `web/tsconfig.check.json`.
 - **Infrastructure: real, not placeholder.** `database_id` in `wrangler.jsonc` is the live
   remote D1 (region WEUR) and `WHATSAPP_NUMBER` is set as a production secret.
 - **NOT yet done:** the site has never been deployed; `ADMIN_EMAIL`, `ACCESS_TEAM_DOMAIN`
@@ -82,8 +90,9 @@ npm run db:migrate:remote   # apply migrations to the REMOTE/prod D1 (needs real
   (indexes) is applied locally but **not** to the remote D1 — run `npm run db:migrate:remote`
   before or at deploy. The dev-only admin bypass (`.dev.vars` `DEV_ADMIN_SECRET`) is
   force-disabled once `ACCESS_AUD` is set.
-- **Next: F-M3a** — the leads dashboard, per
-  `docs/superpowers/specs/2026-09-10-forge-admin-dashboard-design.md` §5. Then F-M3b
-  (insights), then F-M4c (deploy + lock `/admin`).
+- **Next: F-M3b** — the insights/funnel screen, per
+  `docs/superpowers/specs/2026-09-10-forge-admin-dashboard-design.md` §6. Then F-M4c
+  (deploy + lock `/admin`). The dashboard already shows an inert "Insights — next" tab
+  where that screen slots in.
   Never import `src/lib/answerKey.ts` from anything under `web/` — `web/test/answer-key-boundary.test.ts`
   fails the build if you do.
